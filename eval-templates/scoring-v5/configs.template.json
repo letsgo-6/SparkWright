@@ -1,0 +1,12 @@
+[
+  {
+    "baseUrl": "https://replace-with-reviewed-endpoint.invalid/v1",
+    "model": "replace-with-exact-model",
+    "apiKey": "",
+    "source": "user",
+    "family": "replace-with-independent-family",
+    "provider": "replace-with-provider",
+    "input_per_million": 0,
+    "output_per_million": 0
+  }
+]

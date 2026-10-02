@@ -1,0 +1,26 @@
+{
+  "standard_version": "sparkwright-idea-v5.0.0",
+  "engine_hash": "f64159c1e1a8466d9c8ab951306ed840b7ea4087c082d974e3547805821d1e98",
+  "prompt_hash": "cee35394ad564beb6db2cd9db24713dd0a8e885d0248f3a7f2abb1b2c3033f82",
+  "synthesis_source_hash": "093be376e0afda96655cf053767566edca848ddb2ffbad1ebedbd2bd09cd29a6",
+  "duration_policy": "no-deadline-v1",
+  "frozen_at": "2026-10-01T11:50:57.674Z",
+  "hashes": {
+    "development-inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "calibration-inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "hidden-inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "natural-inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "performance-inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "synthesis-inputs.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "counts": {
+    "development": 0,
+    "calibration": 0,
+    "hidden": 0,
+    "natural": 0,
+    "performance": 0,
+    "synthesis": 0
+  },
+  "ready": false,
+  "evaluation_role": "optional_diagnostics_no_runtime_gate"
+}
