@@ -23,6 +23,15 @@ npm start
 
 Windows 用户先右键 ZIP →「全部解压」，进入能看到 `package.json` 的文件夹。点击资源管理器顶部地址栏，输入 `cmd` 并按回车，然后逐条运行上述命令；等 `npm ci` 安装完成后再运行 `npm start`。
 
+如果打开的是 PowerShell（提示符以 `PS` 开头），请逐条运行以下命令：
+
+```powershell
+npm.cmd ci
+npm.cmd start
+```
+
+出现“无法加载文件 npm.ps1，因为在此系统上禁止运行脚本”时，使用以上 `npm.cmd` 命令即可；不需要管理员权限或修改 PowerShell 执行策略。等待安装完成后再启动，以后在 PowerShell 中启动只需 `npm.cmd start`。
+
 保持命令窗口打开，在浏览器地址栏输入 `http://127.0.0.1:5318`，即可直接进入应用。停止服务时，在启动终端按 Ctrl+C。以后启动只需运行 `npm start`。个人版不需要运行 `npm run account:init`；旧命令只会提示无需账号。
 
 开发时运行 `npm run dev`，访问 `http://127.0.0.1:5310`。开发界面把 `/api` 请求转发到本地服务端。端口可在自己的 `.env` 中通过 `PORT`、`WEB_PORT` 修改。
