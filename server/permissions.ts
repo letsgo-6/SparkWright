@@ -23,6 +23,7 @@ export function findUser(id: number): AuthUser | null {
 }
 
 export function currentUser(req: FastifyRequest): AuthUser | null {
+  if (req.authUser) return findUser(req.authUser.id)
   const identity = getSessionUser(req)
   return identity ? findUser(identity.id) : null
 }

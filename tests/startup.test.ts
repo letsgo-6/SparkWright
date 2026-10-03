@@ -12,6 +12,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import Database from 'better-sqlite3'
 import bcrypt from 'bcryptjs'
+import { PERSONAL_EDITION } from '../server/edition'
 
 const root = path.resolve(import.meta.dirname, '..')
 async function freePort() {
@@ -40,7 +41,8 @@ for (const mode of ['env-file', 'process-env', 'missing'] as const) {
     const legacy = new Database(path.join(temp, 'data', 'ideabox.db'))
     legacy.exec("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL DEFAULT (datetime('now'))); INSERT INTO users (name) VALUES ('legacy-startup')")
     legacy.exec('ALTER TABLE users ADD COLUMN email TEXT; ALTER TABLE users ADD COLUMN password_hash TEXT')
-    legacy.prepare('INSERT INTO users (name,email,password_hash) VALUES (?,?,?)').run('startup-fixture', 'startup@test.invalid', bcrypt.hashSync('fixture-password-123', 10))
+    if (PERSONAL_EDITION) legacy.prepare('UPDATE users SET email=?,password_hash=?').run('startup@test.invalid', bcrypt.hashSync('fixture-password-123', 10))
+    else legacy.prepare('INSERT INTO users (name,email,password_hash) VALUES (?,?,?)').run('startup-fixture', 'startup@test.invalid', bcrypt.hashSync('fixture-password-123', 10))
     legacy.close()
     const child = spawn(process.execPath, ['--import', pathToFileURL(path.join(root, 'node_modules/tsx/dist/loader.mjs')).href, path.join(root, 'server/index.ts')], { cwd: temp, env, windowsHide: true })
     let output = ''
@@ -50,7 +52,7 @@ for (const mode of ['env-file', 'process-env', 'missing'] as const) {
     const controller = new AbortController()
     const deadline = setTimeout(() => controller.abort(), 12000)
     try {
-      if (mode === 'missing') {
+      if (mode === 'missing' && !PERSONAL_EDITION) {
         const [code] = await Promise.race([exited, new Promise<never>((_, reject) => controller.signal.addEventListener('abort', () => reject(new Error('Startup did not fail closed'))))])
         assert.notEqual(code, 0)
         assert.match(output, /AUTH_SECRET/)
@@ -63,18 +65,25 @@ for (const mode of ['env-file', 'process-env', 'missing'] as const) {
           if (controller.signal.aborted) throw new Error('Startup timeout')
           await new Promise((resolve) => setTimeout(resolve, 30))
         }
-        const response = await fetch(`http://127.0.0.1:${port}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({email:'startup@test.invalid',password:'fixture-password-123'}), signal: controller.signal })
+        const response = PERSONAL_EDITION
+          ? await fetch(`http://127.0.0.1:${port}/api/auth/me`, { signal: controller.signal })
+          : await fetch(`http://127.0.0.1:${port}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({email:'startup@test.invalid',password:'fixture-password-123'}), signal: controller.signal })
         assert.equal(response.status, 200)
+        if (PERSONAL_EDITION) {
+          assert.equal(response.headers.get('set-cookie'), null)
+          assert.equal((await response.json() as any).user.email, 'startup@test.invalid')
+        } else {
         const token = response.headers.get('set-cookie')!.split(';')[0].split('=')[1]
         const parts = token.split('.')
         const expected = createHmac('sha256', mode === 'process-env' ? processSecret : fileSecret).update(`${parts[0]}.${parts[1]}`).digest('base64url')
         assert.equal(parts[2], expected, 'Actual server must sign with the supplied secret')
+        }
         const inspect = new Database(path.join(temp,'data','ideabox.db'), { readonly:true })
         try {
           assert.equal((inspect.pragma('integrity_check') as any)[0].integrity_check, 'ok')
-          assert.equal((inspect.prepare("SELECT email FROM users WHERE name='legacy-startup'").get() as any).email,null)
+          assert.equal((inspect.prepare("SELECT email FROM users WHERE name='legacy-startup'").get() as any).email, PERSONAL_EDITION ? 'startup@test.invalid' : null)
           assert.equal((inspect.prepare("SELECT count(*) n FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").get() as any).n,37)
-          assert.equal((inspect.prepare("SELECT email_verified_at FROM users WHERE name='startup-fixture'").get() as any).email_verified_at, null)
+          assert.equal((inspect.prepare('SELECT email_verified_at FROM users WHERE name=?').get(PERSONAL_EDITION ? 'legacy-startup' : 'startup-fixture') as any).email_verified_at, null)
         } finally { inspect.close() }
       }
     } finally {

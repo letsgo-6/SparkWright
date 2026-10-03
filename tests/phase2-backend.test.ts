@@ -17,7 +17,7 @@ const { db } = await import('../server/db')
 const { buildApp } = await import('../server/app')
 const { signToken } = await import('../server/auth')
 const { ChannelPresence } = await import('../server/presence')
-const app = await buildApp()
+const app = await buildApp({}, false)
 await app.ready()
 const origin = 'http://127.0.0.1:5318'
 
@@ -49,7 +49,7 @@ test('batch3 account languages default independently, persist and never overwrit
   assert.equal(row.language, 'en'); assert.equal(row.api_key, 'language-fixture-key'); assert.equal(row.model, 'language-fixture-model')
   assert.equal((await call('GET', '/api/settings', second)).language, 'zh-CN')
   assert.equal((await call('PUT', '/api/settings', first, { language: 'fr' }, 400)).error.code, 'invalid_language')
-  const fresh = await buildApp()
+  const fresh = await buildApp({}, false)
   try {
     const response = await fresh.inject({ method: 'GET', url: '/api/settings', headers: { cookie: first.cookie } })
     assert.equal(response.statusCode, 200); assert.equal(response.json().language, 'en')

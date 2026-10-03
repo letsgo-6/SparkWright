@@ -10,7 +10,7 @@ const { db } = await import('../server/db')
 const { buildApp } = await import('../server/app')
 const { signToken } = await import('../server/auth')
 const mailbox = testMailbox()
-const app = await buildApp(mailbox.options)
+const app = await buildApp(mailbox.options, false)
 try {
   let owner = db.prepare("SELECT id, name FROM users WHERE name = 'legacy-data-owner'").get() as { id: number; name: string } | undefined
   if (!owner) {

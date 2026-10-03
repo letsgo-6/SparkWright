@@ -37,6 +37,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [personalEdition, setPersonalEdition] = useState(false)
   const [checking, setChecking] = useState(true)
+  const [startupFailed, setStartupFailed] = useState(false)
   const [authNotice, setAuthNotice] = useState('')
   const [noticeVersion, setNoticeVersion] = useState(0)
   const sessionVersion = useRef(0)
@@ -62,7 +63,7 @@ export default function App() {
     document.title = tr('SparkWright · 让灵感成为作品')
   }, [language])
 
-  // 启动时向服务端确认会话（httpOnly Cookie 里的 JWT）
+  // 个人版获取本地工作区；多人版向服务端确认会话。
   useEffect(() => {
     let active = true
     const refresh = () => {
@@ -72,11 +73,12 @@ export default function App() {
           const settings = r.user ? await api.get('/api/settings').catch(() => null) : null
           if (active && version === sessionVersion.current) {
             setPersonalEdition(r.personalEdition === true)
+            setStartupFailed(false)
             if (r.user) setLanguage(validLanguage(settings?.language) ? settings.language : 'zh-CN')
             setUser(r.user)
           }
         })
-        .catch(() => { if (active && version === sessionVersion.current) setUser(null) })
+        .catch(() => { if (active && version === sessionVersion.current) { setUser(null); setStartupFailed(true) } })
         .finally(() => { if (active && version === sessionVersion.current) setChecking(false) })
     }
     const onDenied = (event: Event) => {
@@ -97,6 +99,8 @@ export default function App() {
       </div>
     )
   }
+
+  if (!user && (personalEdition || startupFailed)) return <div className="welcome"><div className="welcome-card"><p role="alert">{tr('网络连接失败，请检查网站服务后重试。')}</p><button className="btn" onClick={() => window.location.reload()}>{tr('重试')}</button></div></div>
 
   if (!user) return <AuthPage registrationEnabled={!personalEdition} notice={authNotice} onAuthed={async (next) => {
     const version = ++sessionVersion.current
@@ -151,14 +155,14 @@ export default function App() {
             <NavLink to="/settings">{tr("⚙️ 设置")}</NavLink>
             <NavLink to="/feedback">{tr('💬 用户反馈')}</NavLink>
           </nav>
-          <div className="user-chip">
+          {personalEdition ? <div className="user-chip"><span className="muted">{tr('本地个人版')}</span></div> : <div className="user-chip">
             <span className="avatar">{user.name.slice(0, 1)}</span>
             <div className="user-chip-text">
               <b>{user.name}</b>
               <button className="link-btn" onClick={logout}>
                 {tr("退出登录")}</button>
             </div>
-          </div>
+          </div>}
         </div>
   </>
 

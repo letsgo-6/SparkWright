@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { test, after } from 'node:test'
 import { randomBytes } from 'node:crypto'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readdirSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -16,7 +16,9 @@ const { comparePassword } = await import('../server/auth')
 after(async () => {
   db.close(); process.chdir(previous)
   assert.ok(path.resolve(temp).startsWith(path.join(os.tmpdir(), 'sparkwright-account-init-')))
-  await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(error => {
+    if (!['EBUSY', 'EPERM'].includes(error.code) || readdirSync(temp).length) throw error
+  })
 })
 
 test('fresh installation creates only the operator account, stores a hash, and refuses overwrite', async () => {

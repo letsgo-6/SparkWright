@@ -9,9 +9,10 @@
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { PERSONAL_EDITION } from './edition'
 
 const SECRET = process.env.AUTH_SECRET
-if (!SECRET || SECRET.length < 32) throw new Error('请设置至少 32 字符的 AUTH_SECRET；本地运行请先执行 npm run setup:local')
+if (!PERSONAL_EDITION && (!SECRET || SECRET.length < 32)) throw new Error('请设置至少 32 字符的 AUTH_SECRET；本地运行请先执行 npm run setup:local')
 const COOKIE_NAME = 'ideabox_session'
 const MAX_AGE = 60 * 60 * 24 * 7 // 7 天
 
@@ -21,7 +22,10 @@ export interface SessionUser {
 }
 
 const b64url = (input: string | Buffer) => Buffer.from(input).toString('base64url')
-const hmac = (data: string) => crypto.createHmac('sha256', SECRET).update(data).digest('base64url')
+const hmac = (data: string) => {
+  if (!SECRET || SECRET.length < 32) throw new Error('会话签发需要至少 32 字符的 AUTH_SECRET')
+  return crypto.createHmac('sha256', SECRET).update(data).digest('base64url')
+}
 
 /** 签发 JWT（HS256）：header.payload.signature */
 export function signToken(userId: number, name: string): string {

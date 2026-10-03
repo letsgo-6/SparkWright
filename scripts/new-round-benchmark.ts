@@ -50,7 +50,7 @@ try{
   db.prepare("UPDATE users SET role='admin' WHERE id=10000").run()
   process.env.SPARKWRIGHT_LEADERBOARD_ENABLED='true'
   const {buildApp}=await import('../server/app'),{signToken}=await import('../server/auth')
-  app=await buildApp();const address=await app.listen({host:'127.0.0.1',port:0})
+  app=await buildApp({},false);const address=await app.listen({host:'127.0.0.1',port:0})
   const headers={cookie:`ideabox_session=${signToken(10000,'benchmark')}`}
   async function get(route:string){const response=await fetch(address+route,{headers});if(!response.ok)throw new Error(`Benchmark HTTP ${response.status}`);await response.json()}
   async function http(work:()=>Promise<void>,n:number){const samples:number[]=[];for(let i=0;i<n;i++){const start=performance.now();await work();samples.push(performance.now()-start)}samples.sort((a,b)=>a-b);return{count:n,p95_ms:samples[Math.ceil(n*.95)-1]}}

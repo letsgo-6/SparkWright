@@ -4,6 +4,7 @@ import { Writable } from 'node:stream'
 import { pathToFileURL } from 'node:url'
 import { loadEnvFile } from '../server/env'
 import { normalizeEmail, validEmail } from '../server/email-identity'
+import { PERSONAL_EDITION } from '../server/edition'
 
 export async function initializeOwner(input: { email: string; name: string; password: string }): Promise<number> {
   const email = normalizeEmail(input.email), name = input.name.trim()
@@ -24,6 +25,10 @@ export async function initializeOwner(input: { email: string; name: string; pass
 }
 
 async function main(): Promise<void> {
+  if (PERSONAL_EDITION) {
+    console.log('个人版无需设置登录账号。请运行 npm start，然后打开 http://127.0.0.1:5318。')
+    return
+  }
   if (!process.stdin.isTTY || !process.stdout.isTTY || process.argv.length !== 2) {
     throw new Error('请在项目根目录的交互终端运行 npm run account:init；不要把密码写入命令参数')
   }

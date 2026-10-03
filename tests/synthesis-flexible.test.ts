@@ -12,7 +12,7 @@ process.chdir(temp);process.env.AUTH_SECRET=randomBytes(48).toString('hex');dele
 const {db}=await import('../server/db'),{buildApp}=await import('../server/app'),{signToken}=await import('../server/auth')
 const {userOperation}=await import('../server/scoring-operations')
 const {validateGeneration}=await import('../server/idea-synthesis')
-const app=await buildApp();await app.ready()
+const app=await buildApp({}, false);await app.ready()
 const cfg={baseUrl:'https://fixture.test.invalid/v1',apiKey:'dummy-flexible-key',model:'fixture-v5',source:'user' as const}
 function user(){const id=Number(db.prepare("INSERT INTO users(name,role) VALUES(?,'user')").run(randomUUID()).lastInsertRowid);db.prepare('INSERT INTO user_settings(user_id,base_url,api_key,model) VALUES(?,?,?,?)').run(id,cfg.baseUrl,cfg.apiKey,cfg.model);return {id,cookie:'ideabox_session='+signToken(id,'fixture')}}
 function idea(who:ReturnType<typeof user>,title:string,content:string){const id=Number(db.prepare('INSERT INTO ideas(user_id,title,content) VALUES(?,?,?)').run(who.id,title,content).lastInsertRowid);return db.prepare('SELECT * FROM ideas WHERE id=?').get(id) as any}

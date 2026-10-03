@@ -35,6 +35,7 @@ import { ActivityTracker, registerActivity } from './activity'
 import { registerFeedbackRoutes } from './feedback'
 import { registerLeaderboard } from './leaderboard'
 import { PERSONAL_EDITION } from './edition'
+import { localWorkspace, requireLocalRequest } from './local-workspace'
 
 type Any = Record<string, any>
 
@@ -67,10 +68,11 @@ const NO_AI_CONFIG = {
   message: '还没有可用的 AI 模型：请在「设置」页填入你自己的 API Key（OpenAI 兼容接口均可），或在服务器 .env 中配置 AI_API_KEY。',
 }
 
-// 无需登录即可访问的接口（其余 /api/* 一律要求有效会话）
+// 多人版的公开接口；个人版所有业务请求使用本地工作区身份。
 const PUBLIC_PATHS = new Set(['/api/health', '/api/auth/login', '/api/auth/register', '/api/auth/register/send-code', '/api/auth/logout', '/api/auth/me'])
 
-export async function buildApp(registration: RegistrationOptions = {}) {
+export async function buildApp(registration: RegistrationOptions = {}, personalEdition = PERSONAL_EDITION) {
+  const localUser = personalEdition ? localWorkspace() : null
   const app = Fastify({ logger: false })
   app.addHook('onSend',async(req,reply,payload)=>{
     if(/^\/api\/(ideas(?:[/?]|$)|plaza(?:[/?]|$)|synthesis(?:[/?]|$))/.test(req.url))reply.header('Cache-Control','no-store')
@@ -95,8 +97,13 @@ export async function buildApp(registration: RegistrationOptions = {}) {
   // ---------- 登录守卫（移植「起念」guard.ts 思路：所有业务 API 按会话用户隔离） ----------
   app.addHook('onRequest', async (req) => {
     ;(req as any).scoringReceivedAt=performance.now()
+    if (localUser) {
+      requireLocalRequest(req)
+      req.authUser = localUser
+    }
     const url = (req.url || '').split('?')[0]
     if (!url.startsWith('/api')) return
+    if (localUser && (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.headers.origin)) requireOrigin(req)
     if (PUBLIC_PATHS.has(url)) return
     requireAuth(req)
   })
@@ -136,33 +143,35 @@ export async function buildApp(registration: RegistrationOptions = {}) {
   app.get('/api/health', async () => ({ status: 'ok', app: 'SparkWright', now: nowIso() }))
 
   // ---------- 认证：注册 / 登录 / 登出 / 当前用户 ----------
-  registerEmailRegistration(app, { ...registration, enabled: registration.enabled ?? !PERSONAL_EDITION })
+  if (!personalEdition) {
+    registerEmailRegistration(app, registration)
 
-  app.post<{ Body: Any }>('/api/auth/login', async (req, reply) => {
-    const mail = String(req.body?.email || '').trim().toLowerCase()
-    const pass = String(req.body?.password || '')
-    if (!mail || !pass) throw Object.assign(new Error('请填写邮箱和密码'), { statusCode: 400  , code: 'login_fields_required' })
+    app.post<{ Body: Any }>('/api/auth/login', async (req, reply) => {
+      const mail = String(req.body?.email || '').trim().toLowerCase()
+      const pass = String(req.body?.password || '')
+      if (!mail || !pass) throw Object.assign(new Error('请填写邮箱和密码'), { statusCode: 400  , code: 'login_fields_required' })
 
-    const id = emailAccountId(db, mail)
-    const user = id ? db.prepare('SELECT * FROM users WHERE id = ?').get(id) as Any : null
-    if (!user || !user.password_hash || !comparePassword(pass, user.password_hash)) {
-      throw Object.assign(new Error('邮箱或密码不正确'), { statusCode: 401  , code: 'invalid_credentials' })
-    }
-    const trusted = findUser(user.id)
-    if (!trusted) throw Object.assign(new Error('账号状态异常，请联系维护者'), { statusCode: 401  , code: 'account_unavailable' })
-    setAuthCookie(reply, signToken(trusted.id, trusted.name))
-    return trusted
-  })
+      const id = emailAccountId(db, mail)
+      const user = id ? db.prepare('SELECT * FROM users WHERE id = ?').get(id) as Any : null
+      if (!user || !user.password_hash || !comparePassword(pass, user.password_hash)) {
+        throw Object.assign(new Error('邮箱或密码不正确'), { statusCode: 401  , code: 'invalid_credentials' })
+      }
+      const trusted = findUser(user.id)
+      if (!trusted) throw Object.assign(new Error('账号状态异常，请联系维护者'), { statusCode: 401  , code: 'account_unavailable' })
+      setAuthCookie(reply, signToken(trusted.id, trusted.name))
+      return trusted
+    })
 
-  app.post('/api/auth/logout', async (_req, reply) => {
-    const user = currentUser(_req)
-    if (user) presence.leaveAll(user.id)
-    clearAuthCookie(reply)
-    return { ok: true }
-  })
+    app.post('/api/auth/logout', async (_req, reply) => {
+      const user = currentUser(_req)
+      if (user) presence.leaveAll(user.id)
+      clearAuthCookie(reply)
+      return { ok: true }
+    })
+  }
 
   app.get('/api/auth/me', async (req) => {
-    return { user: currentUser(req), personalEdition: PERSONAL_EDITION }
+    return { user: currentUser(req), personalEdition }
   })
 
   registerAdminRoutes(app)

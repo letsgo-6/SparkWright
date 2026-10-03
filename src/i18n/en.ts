@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 // Product interface only. User content and model output are never translated.
 export const EN: Record<string, string> = {
+  '本地个人版': 'Local personal edition',
   "星空": "Starry",
   "深邃星蓝 · 清晰文字 · 灵动反馈": "Deep space blue · Clear text · Responsive feedback",
   "星空为默认外观，原有三种主题仍可选择；只改变界面，不影响任何数据。": "Starry is the default. The three existing themes remain available. Appearance changes do not affect your data.",

@@ -21,7 +21,7 @@ delete process.env.ZAI_API_KEY
 const { db } = await import('../server/db')
 const { buildApp } = await import('../server/app')
 const mailbox = testMailbox()
-const app = await buildApp(mailbox.options)
+const app = await buildApp(mailbox.options, false)
 let a: { id: number; cookie: string }
 let b: { id: number; cookie: string }
 

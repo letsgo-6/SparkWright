@@ -118,7 +118,7 @@ async function main(){
   const port=(reservation.address() as {port:number}).port;await new Promise<void>((resolve,reject)=>reservation.close(error=>error?reject(error):resolve()))
   const url='http://127.0.0.1:'+port;process.env.APP_ORIGIN=url
   const {db}=await import('../server/db');database=db;const {buildApp}=await import('../server/app');const {signToken}=await import('../server/auth')
-  app=await buildApp();await app.listen({host:'127.0.0.1',port})
+  app=await buildApp({},false);await app.listen({host:'127.0.0.1',port})
   globalThis.fetch=(async(...args:Parameters<typeof fetch>)=>{if(String(args[0]).startsWith(url+'/'))return originalFetch(...args);if(ledger.stop||ledger.attempts>=ledger.max)throw Object.assign(new Error('Evaluation call budget exhausted'),{code:'synthesis_budget_exceeded',statusCode:429});ledger.attempts++;saveLedger();const headers=new Headers(args[1]?.headers);if(cacheProfile==='cold')headers.set('Connection','close');return originalFetch(args[0],{...args[1],headers})}) as typeof fetch
   const tasks=configurations.flatMap(config=>inputs.flatMap((input:any)=>Array.from({length:repeat},(_,repetition)=>({config,input,repetition,id:hash({set,input_id:input.id,configuration:modelFingerprint(config),repetition,cache_profile:arg('--cache-profile')||'cold',concurrency})}))))
   let cursor=0,executed=0,failures=0

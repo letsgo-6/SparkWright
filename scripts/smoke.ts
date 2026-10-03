@@ -34,7 +34,7 @@ writeFileSync(path.join(temp, 'dist/index.html'), '<!doctype html><title>Isolate
 const { db } = await import('../server/db')
 const { buildApp } = await import('../server/app')
 const mailbox = testMailbox()
-const app = await buildApp(mailbox.options)
+const app = await buildApp(mailbox.options, false)
 const origin = 'http://127.0.0.1:5318'
 let checks = 0
 async function check(label: string, work: () => unknown | Promise<unknown>) {
@@ -209,7 +209,7 @@ try {
   await check('configured production origin is exact and excludes default development origins', async () => {
     process.env.APP_ORIGIN = 'https://sparkwright.example.test'
     process.env.NODE_ENV = 'production'
-    const deployed = await buildApp()
+    const deployed = await buildApp({}, false)
     try {
       for (const rejected of [origin, 'http://127.0.0.1:5310', 'https://sparkwright.example.test.attacker.test']) {
         const response = await deployed.inject({ method: 'PATCH', url: `/api/admin/users/${c.id}/role`, headers: { cookie: a.cookie, origin: rejected }, payload: { role: 'admin' } })

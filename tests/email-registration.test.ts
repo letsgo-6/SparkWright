@@ -25,7 +25,7 @@ let sequence = 0
 async function fixture() {
   let time = Date.now(), fail = false, gate: Promise<void> | undefined
   const prefix = `emailcase${++sequence}`, email = `${prefix}@test.invalid`, codes = new Map<string, string>()
-  const app = await buildApp({ enabled: true, now: () => time, mailer: { ready() {}, async send(target, code) { codes.set(target, code); if (gate) await gate; if (fail) throw new Error('fixture SMTP authorization/private failure') } } })
+  const app = await buildApp({ enabled: true, now: () => time, mailer: { ready() {}, async send(target, code) { codes.set(target, code); if (gate) await gate; if (fail) throw new Error('fixture SMTP authorization/private failure') } } }, false)
   const request = async (url: string, body: unknown, expected = 200, ip = '127.50.0.1', headers: Record<string, string> = {}) => {
     const response = await app.inject({ method: 'POST', url, remoteAddress: ip, headers, payload: body as any })
     assert.equal(response.statusCode, expected, `Unexpected ${url} status`); return response
@@ -121,7 +121,7 @@ test('email: persistent sending hour/cooldown limits include SMTP failures and s
   f.fail(true); await f.send(f.email,503); f.fail(false)
   for (let index=0;index<4;index++) { f.advance(60000); await f.send() }
   f.advance(60000); const limit=await f.send(f.email,429); assert.equal(Number(limit.headers['retry-after']),3300)
-  const next=await buildApp({enabled:true,now:f.now,mailer:{ready(){},async send(){throw new Error('must not send')}}})
+  const next=await buildApp({enabled:true,now:f.now,mailer:{ready(){},async send(){throw new Error('must not send')}}}, false)
   try { const rejected=await next.inject({method:'POST',url:'/api/auth/register/send-code',payload:{email:f.email}}); assert.equal(rejected.statusCode,429) } finally { await next.close() }
   f.advance(3300001); await f.send()
 }))
@@ -178,7 +178,7 @@ test('email: real Nodemailer local SMTP wire accepts correct recipient/brand and
   const smtp=await testSmtp(), keys=['EMAIL_SMTP_HOST','EMAIL_SMTP_PORT','EMAIL_SMTP_SECURE','EMAIL_SMTP_USER','EMAIL_SMTP_PASS','EMAIL_FROM']
   const prior=Object.fromEntries(keys.map((key)=>[key,process.env[key]]))
   Object.assign(process.env,{EMAIL_SMTP_HOST:'127.0.0.1',EMAIL_SMTP_PORT:String(smtp.port),EMAIL_SMTP_SECURE:'false',EMAIL_SMTP_USER:'sender@test.invalid',EMAIL_SMTP_PASS:'fixture-smtp-password',EMAIL_FROM:'SparkWright <sender@test.invalid>'})
-  const app=await buildApp({enabled:true})
+  const app=await buildApp({enabled:true}, false)
   try {
     assert.equal(smtpConfig().secure,false); const send=await app.inject({method:'POST',url:'/api/auth/register/send-code',payload:{email:'wire@test.invalid'}}); assert.equal(send.statusCode,200)
     const message=smtp.messages.get('wire@test.invalid')!; assert.match(message.code,/^\d{6}$/); assert.equal(message.from,'sender@test.invalid'); assert.deepEqual(message.recipients,['wire@test.invalid']); assert.equal(message.subject,'SparkWright 注册验证码'); assert.match(message.text,/10 分钟/)
@@ -215,7 +215,7 @@ test('email: invalid digest and key rotation fail safely without bypass', () => 
 
 test('email: missing SMTP creates no code or user and old login remains available', async () => {
   const saved=process.env.EMAIL_SMTP_HOST; delete process.env.EMAIL_SMTP_HOST
-  const app=await buildApp({enabled:true})
+  const app=await buildApp({enabled:true}, false)
   try {
     const count=(db.prepare('SELECT count(*) n FROM users').get() as any).n
     const result=await app.inject({method:'POST',url:'/api/auth/register/send-code',payload:{email:'missing-smtp@test.invalid'}})

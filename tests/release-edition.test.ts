@@ -27,29 +27,30 @@ test('edition capability matches package and default personal registration canno
   const app = await buildApp()
   try {
     const status = (await app.inject({ method: 'GET', url: '/api/auth/me' })).json()
-    assert.equal(status.user, null)
+    assert.equal(Boolean(status.user), PERSONAL_EDITION)
     assert.equal(status.personalEdition, PERSONAL_EDITION)
     if (PERSONAL_EDITION) for (const url of ['/api/auth/register', '/api/auth/register/send-code']) {
-      const response = await app.inject({ method: 'POST', url, payload: { email: 'fixture@example.invalid', role: 'owner' } })
-      assert.equal(response.statusCode, 403)
+      const response = await app.inject({ method: 'POST', url, headers: { origin: 'http://127.0.0.1:5318' }, payload: { email: 'fixture@example.invalid', role: 'owner' } })
+      assert.equal(response.statusCode, 404)
     }
   } finally { await app.close() }
 })
 
 test('disabled registration rejects both endpoints before mail delivery or account creation', async () => {
   let sends = 0
-  const app = await buildApp({ enabled: false, mailer: { ready() { sends++ }, async send() { sends++ } } })
+  const count = (db.prepare('SELECT count(*) AS n FROM users').get() as { n: number }).n
+  const app = await buildApp({ enabled: false, mailer: { ready() { sends++ }, async send() { sends++ } } }, false)
   try {
     for (const url of ['/api/auth/register', '/api/auth/register/send-code']) {
       const response = await app.inject({ method: 'POST', url, payload: { email: 'fixture@example.invalid' } })
       assert.equal(response.statusCode, 403, `${url}: ${response.body}`)
     }
     assert.equal(sends, 0)
-    assert.equal((db.prepare('SELECT count(*) AS n FROM users').get() as { n: number }).n, 0)
+    assert.equal((db.prepare('SELECT count(*) AS n FROM users').get() as { n: number }).n, count)
   } finally { await app.close() }
 })
 
-test('personal login hides registration while multi-user login retains it', () => {
+test('legacy multi-user authentication component retains its registration option', () => {
   const html = (enabled: boolean) => renderToStaticMarkup(createElement(AuthPage, { onAuthed() {}, registrationEnabled: enabled }))
   assert.equal((html(false).match(/class="auth-tab(?: active)?\s*"/g) || []).length, 1)
   assert.equal((html(true).match(/class="auth-tab(?: active)?\s*"/g) || []).length, 2)
