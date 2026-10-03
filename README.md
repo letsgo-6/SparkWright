@@ -1,5 +1,7 @@
 # SparkWright
 
+**新手必看：[操作指南（HTML 图文版）](操作指南.html)**。下载并解压后，双击根目录的 `操作指南.html` 即可查看，无需先启动应用。
+
 记录灵感，让灵感成为作品。SparkWright 集成灵感管理、AI 评分与合成、创作计划、开发项目、内容制作、需求商单与灵感酱 3D 互动。
 
 前端：React + TypeScript + Vite。服务端：Fastify。数据库：SQLite。个人版无需注册或登录。支持中文 / English、四种主题和手机界面。
