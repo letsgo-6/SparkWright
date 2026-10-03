@@ -5,3 +5,4 @@
 *.mp4 binary
 *.webm binary
 *.glb binary
+*.bat -text
