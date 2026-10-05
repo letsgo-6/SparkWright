@@ -2578,7 +2578,7 @@ html[data-theme='brutal'] .sw-topbar, html[data-theme='brutal'] .sw-notice-panel
   margin: 10px 0;
 }
 
-/* ---------- Phase D：制作工坊 + 心仪视频作品 ---------- */
+/* ---------- Phase D：制作工坊 ---------- */
 .tool-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -3166,3 +3166,10 @@ html[data-theme='starry'] :is(button, a, input, textarea, select):focus-visible 
   .sidebar > .nav { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
   .logo-brand, .sidebar-foot { flex-shrink: 0; }
 }
+
+.github-support{display:flex;align-items:flex-start;gap:16px;width:100%;min-width:0}
+.github-support-button{flex-shrink:0;white-space:nowrap;gap:8px}
+.github-support-copy{min-width:0;flex:1;overflow-wrap:anywhere}
+.github-support-copy p{margin:0 0 10px;line-height:1.65}
+.github-support-copy a{color:var(--primary);font-weight:600}
+@media(max-width:640px){.github-support{flex-direction:column;gap:12px}}

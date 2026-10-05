@@ -148,6 +148,4 @@ export const ERROR_MESSAGES: Record<string, readonly [string, string]> = {
   studio_not_found: ['制作方案不存在', 'Studio project not found.'],
   brief_required: ['请填写标题或灵感', 'Enter a title or idea.'],
   scene_required: ['请填写剧情/场景灵感', 'Enter a story or scene idea.'],
-  wish_not_found: ['心仪作品不存在', 'Wish not found.'],
-  wish_description_required: ['该平台链接有反爬，请补填作品描述后再分析', 'The platform blocked retrieval. Add a description before analysis.'],
 }

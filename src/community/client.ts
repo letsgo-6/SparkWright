@@ -11,6 +11,6 @@ async function send(method: string, path: string, body?: unknown, signal?: Abort
   if(!response.ok){if(response.status===401)window.dispatchEvent(new Event('sparkwright:community-expired'));throw apiError(result?.error?.code)}
   return result
 }
-export const community = {get:(p:string,signal?:AbortSignal)=>send('GET',p,undefined,signal),post:(p:string,b?:unknown)=>send('POST',p,b),put:(p:string,b:unknown)=>send('PUT',p,b),patch:(p:string,b:unknown)=>send('PATCH',p,b),localPost:(p:string,b:unknown)=>send('POST',p,b,undefined,true)}
+export const community = {get:(p:string,signal?:AbortSignal)=>send('GET',p,undefined,signal),post:(p:string,b?:unknown,signal?:AbortSignal)=>send('POST',p,b,signal),put:(p:string,b:unknown)=>send('PUT',p,b),patch:(p:string,b:unknown,signal?:AbortSignal)=>send('PATCH',p,b,signal),localPost:(p:string,b:unknown)=>send('POST',p,b,undefined,true)}
 export const socketUrl=()=>`${location.protocol==='https:'?'wss':'ws'}://${location.host}/api/community/ws`
 export type CommunityUser={id:number;name:string;role:'user'|'admin'|'owner';created_at:string}

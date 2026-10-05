@@ -244,9 +244,16 @@ test('B08: reverse matching removes old pairs excluded by top-12 recall', async 
   const s = await json('POST', '/api/studio', a.cookie, { title: 'rain cat video', brief: 'rain cat video' })
   const oldWish = Number(db.prepare("INSERT INTO video_wishes (user_id,title,features) VALUES (?,'unrelated zebra','unrelated zebra')").run(a.id).lastInsertRowid)
   db.prepare('INSERT INTO wish_matches (wish_id,studio_id,score) VALUES (?,?,90)').run(oldWish,s.id)
-  for(let x=0;x<12;x++) db.prepare("INSERT INTO video_wishes (user_id,title,features) VALUES (?,'rain cat video','rain cat video')").run(a.id)
   await json('PATCH', `/api/studio/${s.id}`, a.cookie, { synopsis: 'rain cat video' })
-  assert.equal(db.prepare('SELECT id FROM wish_matches WHERE wish_id=? AND studio_id=?').get(oldWish,s.id),undefined)
+  assert.ok(db.prepare('SELECT id FROM wish_matches WHERE wish_id=? AND studio_id=?').get(oldWish,s.id), 'studio editing must preserve legacy wishlist records without rematching')
+  assert.equal((await json('GET', '/api/studio', a.cookie)).some((item:any)=>item.id===s.id),true)
+  for (const [method,url,payload] of [
+    ['GET','/api/wishes',undefined], ['POST','/api/wishes',{title:'removed'}],
+    ['PATCH',`/api/wishes/${oldWish}`,{title:'removed'}], ['DELETE',`/api/wishes/${oldWish}`,undefined],
+    ...['analyze','rematch','attach','detach'].map(action=>['POST',`/api/wishes/${oldWish}/${action}`,{}]),
+    ['POST','/api/wishes/rematch-all',{}],
+  ] as const) await request(method as any,url as string,a.cookie,payload,404)
+  assert.ok(db.prepare('SELECT id FROM video_wishes WHERE id=?').get(oldWish),'removal must not delete legacy data')
 })
 
 test('R06: idea import rolls back the project if a downstream task write fails', async () => {
@@ -276,16 +283,14 @@ test('B05: completed SSE and ordinary JSON replies are saved exactly once', asyn
   } finally { disableAi(a.id) }
 })
 
-test('B07: no-AI and malformed-AI paths retain keyword matches for orders and wishes', async () => {
+test('B07: no-AI, malformed-AI and network failure paths retain keyword matches for orders', async () => {
   const p = await json('POST', '/api/dev', a.cookie,{name:'resume React SQLite',description:'resume React SQLite',techStack:'React SQLite'})
   const o = await json('POST','/api/orders',a.cookie,{title:'resume React SQLite',requirement:'resume React SQLite',url:'https://example.com/fixture'})
   assert.ok((await json('POST',`/api/orders/${o.id}/match`,a.cookie)).matches.some((x:any)=>x.project_id===p.id))
-  const s=await json('POST','/api/studio',a.cookie,{title:'rain cat video film',brief:'rain cat video film'})
-  const wid=Number(db.prepare("INSERT INTO video_wishes (user_id,title,features) VALUES (?,'rain cat video film','rain cat video film')").run(a.id).lastInsertRowid)
   enableAi(a.id)
   try {
     await mockedAi(()=>Response.json({choices:[{message:{content:'[null]'}}]}),()=>json('POST',`/api/orders/${o.id}/match`,a.cookie))
-    await mockedAi(()=>Promise.reject(new Error('controlled network failure')),()=>json('POST',`/api/wishes/${wid}/rematch`,a.cookie))
-    assert.ok(db.prepare('SELECT id FROM wish_matches WHERE wish_id=? AND studio_id=?').get(wid,s.id))
+    const fallback=await mockedAi(()=>Promise.reject(new Error('controlled network failure')),()=>json('POST',`/api/orders/${o.id}/match`,a.cookie))
+    assert.ok(fallback.matches.some((x:any)=>x.project_id===p.id))
   } finally { disableAi(a.id) }
 })

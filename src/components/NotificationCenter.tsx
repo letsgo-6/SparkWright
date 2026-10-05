@@ -2,22 +2,22 @@
 import { tr } from '../i18n/index'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Phase2Dialog } from './Phase2Dialog'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import type { Announcement, NotifItem, NotificationSummary, Paged, User } from '../types'
 import { fmtDate, fmtTime } from '../utils'
 import { safeActionUrl } from '../../shared/links'
-import { GITHUB_REPOSITORY } from '../lib/github'
+import { GitHubSupport } from './GitHubSupport'
 import { notificationTarget } from '../lib/notification-target'
 
 const EMPTY: NotificationSummary = { notifications_unread: 0, announcements_unread: 0, total_unread: 0 }
 const badge = (count: number) => count > 99 ? '99+' : count
 
-export function NotificationCenter({ user, refreshVersion, actions, leading }: { user: User; refreshVersion: number; actions?: ReactNode; leading?: ReactNode }) {
+export function NotificationCenter({ user, refreshVersion, actions, leading, communityAnnouncements = false }: { user: User; refreshVersion: number; actions?: ReactNode; leading?: ReactNode; communityAnnouncements?: boolean }) {
   const navigate = useNavigate(), location = useLocation()
   const [toolsOpen, setToolsOpen] = useState(false)
   useEffect(() => { setToolsOpen(false); setOpen(false) }, [location.pathname])
-  const modules: Record<string,string> = { ideas: '我的灵感', plaza: '灵感广场', synthesis: '灵感合成', leaderboard: '灵感评分排行榜', channels: '频道聊天', studio: '自媒体制作', media: '作品内容', dev: '开发工程', wishes: '心仪视频作品', orders: '需求商单', consult: '咨询管理', settings: '设置', feedback: '用户反馈', admin: '管理后台' }
+  const modules: Record<string,string> = { ideas: '我的灵感', plaza: '灵感广场', synthesis: '灵感合成', leaderboard: '灵感评分排行榜', channels: '频道聊天', studio: '自媒体制作', media: '作品内容', dev: '开发工程', orders: '需求商单', consult: '咨询管理', settings: '设置', feedback: '用户反馈', admin: '管理后台' }
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'notifications' | 'announcements'>('notifications')
   const [summary, setSummary] = useState(EMPTY)
@@ -45,11 +45,11 @@ export function NotificationCenter({ user, refreshVersion, actions, leading }: {
     const sequence = ++summarySequence.current
     try {
       const result = await api.get('/api/notification-summary', request.signal) as NotificationSummary
-      if (!request.signal.aborted && sequence === summarySequence.current) { setSummary(result); setSummaryError('') }
+      if (!request.signal.aborted && sequence === summarySequence.current) { setSummary(communityAnnouncements ? { ...result, announcements_unread: 0, total_unread: result.notifications_unread } : result); setSummaryError('') }
     } catch (err) {
       if (!request.signal.aborted && sequence === summarySequence.current) setSummaryError(err instanceof Error ? err.message : '未读数量读取失败')
     }
-  }, [])
+  }, [communityAnnouncements])
   const loadList = useCallback(async () => {
     if (!controller.current || controller.current.signal.aborted) return
     listRequest.current?.abort()
@@ -138,8 +138,9 @@ export function NotificationCenter({ user, refreshVersion, actions, leading }: {
   return <header className="sw-topbar">
     <div className="sw-topbar-leading">{leading}<span className="sw-topbar-caption">{tr(modules[location.pathname.split('/')[1]] || '✦ 灵感酱')}</span></div>
     <div className="sw-topbar-actions">
+      {communityAnnouncements && <NavLink className="chip" to="/community/announcements">{tr("社区公告")}</NavLink>}
       <div className="sw-notice-root">
-        <button ref={bell} className="sw-icon-button" aria-label={tr("通知与公告{0}", [summary.total_unread ? tr('，{0} 条未读', [summary.total_unread]) : ''])} aria-expanded={open} aria-controls="sw-notice-panel"
+        <button ref={bell} className="sw-icon-button" aria-label={tr(communityAnnouncements ? "本地通知{0}" : "通知与公告{0}", [summary.total_unread ? tr('，{0} 条未读', [summary.total_unread]) : ''])} aria-expanded={open} aria-controls="sw-notice-panel"
           onClick={() => { if (open) close(); else setOpen(true) }}>
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9 20h6" /></svg>
           {summary.total_unread > 0 && <span className="sw-unread-badge">{badge(summary.total_unread)}</span>}
@@ -148,7 +149,7 @@ export function NotificationCenter({ user, refreshVersion, actions, leading }: {
         {open && <Phase2Dialog variant="drawer" title={tr("通知中心")} onClose={close}><div className="sw-notice-panel" id="sw-notice-panel">
           
           <div className="sw-notice-tabs" role="tablist" aria-label={tr("消息分类")}>
-            {(['notifications', 'announcements'] as const).map((key) => <button key={key} role="tab" id={`sw-tab-${key}`} aria-selected={tab === key} aria-controls="sw-notice-content" disabled={busy}
+            {(communityAnnouncements ? ['notifications'] as const : ['notifications', 'announcements'] as const).map((key) => <button key={key} role="tab" id={`sw-tab-${key}`} aria-selected={tab === key} aria-controls="sw-notice-content" disabled={busy}
               onClick={() => { setTab(key); setPage(1) }}>{key === 'notifications' ? tr("通知") : tr("公告")}
               {summary[`${key}_unread`] > 0 && <span className="sw-tab-count">{badge(summary[`${key}_unread`])}</span>}</button>)}
           </div>
@@ -172,13 +173,8 @@ export function NotificationCenter({ user, refreshVersion, actions, leading }: {
       </div>
       <button className="sw-icon-button" aria-label={tr('更多工具')} aria-haspopup="dialog" onClick={() => setToolsOpen(true)}>•••</button>
       {toolsOpen && <Phase2Dialog variant="drawer" title={tr('更多工具')} onClose={() => setToolsOpen(false)}><div className="global-tools">{actions}
-      {GITHUB_REPOSITORY ? <a className="sw-icon-button sw-github" href={GITHUB_REPOSITORY} target="_blank" rel="noopener noreferrer" aria-label={tr("GitHub 仓库")}><GitHubIcon /></a>
-        : <button className="sw-icon-button sw-github" disabled title={tr("GitHub 未配置")} aria-label={tr("GitHub 未配置")}><GitHubIcon /><span className="small">{tr("未配置")}</span></button>}<p className="muted small">{user.name}</p></div></Phase2Dialog>}
+      <GitHubSupport /><p className="muted small">{user.name}</p></div></Phase2Dialog>}
 
     </div>
   </header>
-}
-
-function GitHubIcon() {
-  return <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.14.68-3.8-1.33-3.8-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.03-.7.08-.69.08-.69 1.13.08 1.72 1.16 1.72 1.16 1 .1.5 2.14 3.28 1.5.1-.73.39-1.24.71-1.52-2.5-.28-5.13-1.25-5.13-5.56 0-1.23.44-2.24 1.16-3.03-.12-.29-.51-1.44.11-3 0 0 .95-.3 3.1 1.16a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.16 3.1-1.16.62 1.56.23 2.71.11 3 .72.79 1.16 1.8 1.16 3.03 0 4.32-2.64 5.27-5.15 5.55.4.35.77 1.04.77 2.1v3.1c0 .3.2.65.78.54A11.25 11.25 0 0 0 12 .75Z" /></svg>
 }

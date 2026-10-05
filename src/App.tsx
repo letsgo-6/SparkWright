@@ -23,7 +23,6 @@ const MediaContentPage = lazy(() => import('./pages/MediaContentPage').then(m =>
 const OrdersPage = lazy(() => import('./pages/OrdersPage').then(m => ({default:m.OrdersPage})))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({default:m.SettingsPage})))
 const StudioPage = lazy(() => import('./pages/StudioPage').then(m => ({default:m.StudioPage})))
-const WishesPage = lazy(() => import('./pages/WishesPage').then(m => ({default:m.WishesPage})))
 const IdeaSynthesisPage = lazy(() => import('./pages/IdeaSynthesisPage').then(m => ({default:m.IdeaSynthesisPage})))
 const ResourcesPage = lazy(() => import('./pages/ResourcesPages').then(m => ({default:m.ResourcesPage})))
 
@@ -131,6 +130,7 @@ export default function App() {
             <NavLink to="/plaza">{tr("🌐 灵感广场")}</NavLink>
             <NavLink to="/leaderboard">{ct('灵感排行榜','Idea leaderboard')}</NavLink>
             <NavLink to="/community">{ct('公共社区','Public community')}</NavLink>
+            <NavLink to="/community/announcements">{ct('社区公告','Community announcements')}</NavLink>
             <NavLink to="/synthesis">{tr("🧬 灵感合成")}</NavLink>
           </div>
           <div className="nav-group">
@@ -143,7 +143,6 @@ export default function App() {
           </div>
           <div className="nav-group">
             <div className="group-label">{tr("目标")}</div>
-            <NavLink to="/wishes">{tr("📺 心仪视频作品")}</NavLink>
             <NavLink to="/orders">{tr("💰 需求商单")}</NavLink>
           </div>
         </nav>
@@ -171,7 +170,7 @@ export default function App() {
       {compact && mobileNavOpen && <Phase2Dialog variant="drawer" title={tr('导航菜单')} onClose={() => setMobileNavOpen(false)}><div className="mobile-navigation" onClick={event => { if ((event.target as HTMLElement).closest('a')) setMobileNavOpen(false) }}>{navigation}<SupportAuthor /></div></Phase2Dialog>}
 
       <main id="main-content" className="main" tabIndex={-1}>
-        <NotificationCenter key={`${user.id}:${user.role}`} user={user} refreshVersion={noticeVersion} actions={<><SupportAuthor /><NavLink className="btn btn-ghost" to="/consult">{tr("咨询接单管道")}</NavLink></>} leading={compact ? <><button className="sw-icon-button mobile-nav-toggle" aria-label={tr(mobileNavOpen ? '收起导航' : '导航菜单')} aria-expanded={mobileNavOpen} aria-controls="primary-navigation" onClick={() => setMobileNavOpen(open => !open)}><svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className={mobileNavOpen ? 'menu-open' : ''} aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button><BrandMark /></> : undefined} />
+        <NotificationCenter communityAnnouncements={personalEdition} key={`${user.id}:${user.role}`} user={user} refreshVersion={noticeVersion} actions={<><SupportAuthor /><NavLink className="btn btn-ghost" to="/consult">{tr("咨询接单管道")}</NavLink></>} leading={compact ? <><button className="sw-icon-button mobile-nav-toggle" aria-label={tr(mobileNavOpen ? '收起导航' : '导航菜单')} aria-expanded={mobileNavOpen} aria-controls="primary-navigation" onClick={() => setMobileNavOpen(open => !open)}><svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className={mobileNavOpen ? 'menu-open' : ''} aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button><BrandMark /></> : undefined} />
         {tr(authNotice) && <div className="page" style={{ paddingBottom: 0 }}><p className="error-text" role="alert">{tr(authNotice)}</p></div>}
         <Suspense fallback={<p role="status">{tr('正在加载…')}</p>}><Routes>
           <Route path="/" element={<SparkPage key={user.id} />} />
@@ -180,7 +179,7 @@ export default function App() {
           <Route path="/media" element={<Navigate to="/studio?tab=archive" replace />} />
           <Route path="/media/:mediaId/content" element={<MediaContentPage user={user} />} />
           <Route path="/studio" element={<StudioPage user={user} />} />
-          <Route path="/wishes" element={<WishesPage user={user} />} />
+          <Route path="/wishes/*" element={<Navigate to="/orders" replace />} />
           <Route path="/consult" element={<ConsultPage user={user} />} />
           <Route path="/dev" element={<DevPage user={user} />} />
           <Route path="/orders" element={<OrdersPage user={user} />} />
@@ -188,6 +187,7 @@ export default function App() {
           <Route path="/settings/api-resources" element={<ResourcesPage kind="api" />} />
           <Route path="/synthesis" element={<IdeaSynthesisPage key={user.id} />} />
           <Route path="/community" element={<CommunityApp key="community" />} />
+          <Route path="/community/announcements" element={<CommunityApp key="announcements" initialTab="announcements"/>} />
           <Route path="/community/submit" element={<CommunityApp key="submit" initialTab="submit" />} />
           <Route path="/leaderboard" element={<CommunityApp key="leaderboard" initialTab="leaderboard" />} />
           <Route path="/feedback" element={<CommunityApp key="feedback" initialTab="feedback" />} />

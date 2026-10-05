@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-// 混合匹配通用库（Phase D §4 重构）：需求商单 / 心仪视频作品 共用
+// 混合匹配通用库（Phase D §4 重构）：需求商单匹配
 // 确定性关键词通道 + 融合公式 + AI 返回解析守卫。纯函数，可单测。
 
 const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'com', 'www', 'http', 'https', 'html'])
@@ -13,7 +13,7 @@ export const SYNONYM_GROUPS: string[][] = [
   ['思维导图', '脑图', 'xmind', 'mindmap'],
   ['数据库', '数据表', 'sql', 'mysql', 'sqlite'],
   ['公众号', '服务号', '订阅号', 'wechat-official'],
-  // Phase D 新增（视频作品风格域）
+  // 视频类商单继续使用这些同义词。
   ['电影感', '胶片', '颗粒', '质感'],
   ['赛博朋克', '霓虹', 'cyberpunk'],
   ['国风', '古风', '汉服', '中式'],

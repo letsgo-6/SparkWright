@@ -226,7 +226,7 @@ export function MediaContentPage({ user }: { user: User }) {
           <div className="panel">
             <div className="panel-head"><h2>{tr("💡 使用提示")}</h2></div>
             <p className="muted small" style={{ lineHeight: 1.8 }}>
-              {tr("这里编辑的是作品关联的制作方案（剧情/人物/场景/工具推荐），保存后同步到「自媒体制作」工坊； 心仪视频作品的匹配评分也会按最新内容重新计算。")}</p>
+              {tr("这里编辑的是作品关联的制作方案（剧情/人物/场景/工具推荐），保存后同步到「自媒体制作」工坊。")}</p>
           </div>
         </div>
       </div>

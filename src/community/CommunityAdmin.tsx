@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import { useEffect, useState } from 'react'
+import { AnnouncementManager } from '../components/AnnouncementManager'
 import { ActivityAnalytics } from '../components/ActivityAnalytics'
 import { useFeatureData } from '../lib/useFeatureData'
 import { tr } from '../i18n'
@@ -10,12 +11,13 @@ export default function CommunityAdmin({user}:{user:CommunityUser}){
   const {data,error:statusError,reload}=useFeatureData<Record<string,any>>('/api/community/admin/status',60000,community.get)
   useEffect(()=>{if(user.role!=='owner')return;void community.get(`/api/admin/moderation/users?page=${page}&pageSize=20`).then(r=>setUsers(r.items)).catch(e=>setError(e.message));void community.get(`/api/admin/plaza/ideas?status=${removed?'removed':'active'}&page=${page}&pageSize=20`).then(r=>setPublicIdeas(r.items)).catch(e=>setError(e.message))},[user.role,page,version,removed])
   const perform=async(action:()=>Promise<unknown>)=>{setError('');try{await action();setVersion(v=>v+1);reload()}catch(e){setError((e as Error).message)}}
-  return <section><h2>{ct('社区管理','Community management')}</h2><nav className="feature-toolbar">{[['status','状态与活跃','Status & activity'],['feedback','反馈收件箱','Feedback inbox'],...(user.role==='owner'?[['moderation','社区治理','Moderation']]:[])].map(([value,zh,en])=><button key={value} className={`chip ${tab===value?'active':''}`} aria-pressed={tab===value} onClick={()=>setTab(value)}>{ct(zh,en)}</button>)}</nav>
+  return <section><h2>{ct('社区管理','Community management')}</h2><nav className="feature-toolbar">{[['status','状态与活跃','Status & activity'],['feedback','反馈收件箱','Feedback inbox'],['announcements','公告管理','Announcements'],...(user.role==='owner'?[['moderation','社区治理','Moderation']]:[])].map(([value,zh,en])=><button key={value} className={`chip ${tab===value?'active':''}`} aria-pressed={tab===value} onClick={()=>setTab(value)}>{ct(zh,en)}</button>)}</nav>
     {(error||statusError)&&<p className="error-text" role="alert">{tr(error||statusError)}</p>}
     {tab==='status'&&<>{data&&<><div className="community-status"><p>{ct('近实时在线','Approximate online')}: <b>{data.online_count}</b> · {ct('连接数','Connections')}: {data.connections} · {ct('连接异常','Connection errors')}: {data.connection_errors}</p><p>{ct('入库消息量','Stored messages')}: 24h {data.message_counts['24h']} / 7d {data.message_counts['7d']} / 30d {data.message_counts['30d']}</p></div><details><summary>{ct('最近发言','Recent messages')}</summary>{data.recent.map((r:Record<string,any>)=><p key={r.id}>{r.author} #{r.user_id} · {r.content}</p>)}</details></>}
       <div className="feature-toolbar">{(['community','chat'] as const).map(key=><button key={key} className={`chip ${scope===key?'active':''}`} aria-pressed={scope===key} onClick={()=>setScope(key)}>{key==='community'?ct('社区活跃','Community activity'):ct('聊天活跃','Chat activity')}</button>)}</div>
       <ActivityAnalytics key={scope} endpoint={`/api/community/admin/activity?scope=${scope}`} get={community.get} description={scope==='chat'?ct('成功发言的普通账号按周期去重；不包含管理员、心跳与轮询。','Distinct regular users who sent messages. Excludes administrators, heartbeats and polling.'):ct('成功发言、主动浏览榜单或公开内容、投稿与撤回的普通账号。只统计社区，不观察本地私人活动。','Regular users who posted, actively browsed, submitted or withdrew content. Community use only; local private activity is not observed.')}/>
     </>}
+    {tab==='announcements'&&<AnnouncementManager client={community} onChanged={()=>window.dispatchEvent(new Event('sparkwright:community-notices-changed'))}/>}
     {tab==='feedback'&&<CommunityFeedback admin/>}
     {tab==='moderation'&&user.role==='owner'&&<>
       {data&&<div className="feature-toolbar"><button className="btn btn-ghost" onClick={()=>{const name=prompt(ct('公共频道名称','Public room name'),data.channel.name);if(name)void perform(()=>community.patch(`/api/admin/channels/${data.channel.id}`,{name}))}}>{ct('修改频道名称','Rename room')}</button><button className="btn btn-ghost" onClick={()=>void perform(async()=>{if(data.channel.archived_at)await community.post(`/api/admin/channels/${data.channel.id}/restore`);else {const path=`/api/admin/channels/${data.channel.id}`;const {communityDelete}=await import('./delete');await communityDelete(path)}})}>{data.channel.archived_at?ct('恢复频道','Resume room'):ct('暂停频道','Pause room')}</button></div>}

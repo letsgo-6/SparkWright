@@ -9,7 +9,7 @@ import { GITHUB_REPOSITORY } from '../lib/github'
 const EMPTY_FORM = { title: '', content: '', action_label: '', action_url: '' }
 
 /** Shared editor; authorization always stays on the server. */
-export function AnnouncementManager({ onChanged }: { onChanged?: () => void }) {
+export function AnnouncementManager({ onChanged, client = api }: { onChanged?: () => void; client?: Pick<typeof api, 'get' | 'post' | 'patch'> }) {
   const [items, setItems] = useState<Announcement[]>([])
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -28,7 +28,7 @@ export function AnnouncementManager({ onChanged }: { onChanged?: () => void }) {
     const version = ++sequence.current
     setLoading(true); setError('')
     try {
-      const result = await api.get(`/api/admin/announcements?page=${page}&pageSize=10`, request.signal) as Paged<Announcement>
+      const result = await client.get(`/api/admin/announcements?page=${page}&pageSize=10`, request.signal) as Paged<Announcement>
       if (!request.signal.aborted && version === sequence.current) { setItems(result.items); setTotal(result.total) }
     } catch (err) { if (!request.signal.aborted && version === sequence.current) setError(err instanceof Error ? err.message : '公告列表加载失败') }
     finally { if (!request.signal.aborted && version === sequence.current) setLoading(false) }
@@ -38,7 +38,7 @@ export function AnnouncementManager({ onChanged }: { onChanged?: () => void }) {
     controller.current = request
     void load(request)
     return () => request.abort()
-  }, [page])
+  }, [page, client])
 
   const mutate = async (work: (signal: AbortSignal) => Promise<unknown>, message: string) => {
     const request = controller.current
@@ -54,7 +54,7 @@ export function AnnouncementManager({ onChanged }: { onChanged?: () => void }) {
     } catch (err) { if (!request.signal.aborted) setError(err instanceof Error ? err.message : '公告保存失败') }
     finally { pending.current = false; if (!request.signal.aborted) setBusy(false) }
   }
-  const save = () => mutate((signal) => editing === null ? api.post('/api/admin/announcements', form, signal) : api.patch(`/api/admin/announcements/${editing}`, form, signal), editing === null ? '草稿已保存。' : '修改已保存，已有阅读状态保留。')
+  const save = () => mutate((signal) => editing === null ? client.post('/api/admin/announcements', form, signal) : client.patch(`/api/admin/announcements/${editing}`, form, signal), editing === null ? '草稿已保存。' : '修改已保存，已有阅读状态保留。')
 
   return <section className="settings-card sw-announcement-manager" aria-label={tr("公告管理")}>
     <div className="panel-head"><h2>{tr("公告管理")}</h2><button className="chip" disabled={busy} onClick={() => { setEditing(null); setForm(EMPTY_FORM); setNotice('') }}>{tr("新建公告")}</button></div>
@@ -75,7 +75,7 @@ export function AnnouncementManager({ onChanged }: { onChanged?: () => void }) {
       {loading ? <p className="muted">{tr("公告加载中…")}</p> : !items.length ? <p className="muted">{tr("还没有公告，先创建一条草稿。")}</p> : items.map((item) => <article className="sw-manager-item" key={item.id}>
         <div><b>{item.title}</b><p className="muted small">{item.status === 'published' ? tr("已发布") : tr("草稿")} · {fmtDate(item.updated_at)}</p></div>
         <div className="actions"><button className="chip" disabled={busy} onClick={() => { setEditing(item.id); setForm({ title: item.title, content: item.content, action_label: item.action_label || '', action_url: item.action_url || '' }); setNotice('') }}>{tr("编辑")}</button>
-          <button className="chip" disabled={busy} onClick={() => void mutate((signal) => api.post(`/api/admin/announcements/${item.id}/${item.status === 'published' ? 'unpublish' : 'publish'}`, undefined, signal), item.status === 'published' ? '已撤下公告。' : '公告已发布。')}>{item.status === 'published' ? tr("撤下") : tr("发布")}</button></div>
+          <button className="chip" disabled={busy} onClick={() => void mutate((signal) => client.post(`/api/admin/announcements/${item.id}/${item.status === 'published' ? 'unpublish' : 'publish'}`, undefined, signal), item.status === 'published' ? '已撤下公告。' : '公告已发布。')}>{item.status === 'published' ? tr("撤下") : tr("发布")}</button></div>
       </article>)}
     </div>
     {total > 10 && <div className="sw-notice-pagination"><button className="chip" disabled={page === 1 || busy || loading} onClick={() => setPage((value) => value - 1)}>{tr("上一页")}</button><span>{page} / {Math.ceil(total / 10)}</span><button className="chip" disabled={page * 10 >= total || busy || loading} onClick={() => setPage((value) => value + 1)}>{tr("下一页")}</button></div>}

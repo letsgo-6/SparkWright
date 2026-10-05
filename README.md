@@ -18,6 +18,10 @@
 
 电脑通过本机后端连接配置的 HTTPS/WSS 社区，手机直接打开轻量社区网址。手机本期只提供社区功能，不下载电脑 3D、视频图标或私人工作台。完整边界见 [个人客户端与社区使用指南](docs/个人客户端与社区使用指南.md)。云端部署适配源码不包含在此次个人仓库公开发布范围。
 
+社区上线后，电脑在“社区公告”入口、手机在社区“公告”页查看同一份管理员公告，已读状态按社区账号跨设备同步。owner/admin 在社区后台管理公告；本地默认身份没有社区管理权限。心仪视频作品功能已移除，旧数据仍保留在本机备份和导出中，自媒体制作与需求商单继续可用。
+
+喜欢 SparkWright？进入 [GitHub 为我点亮 Star](https://github.com/letsgo-6/SparkWright)，你们的点亮是我的最大动力 :) 如果 GitHub 访问不畅，可以访问 [Watt Toolkit 官方下载](https://steampp.net/)后尝试加速。Star 由你在 GitHub 手动操作。
+
 ## 快速开始
 
 下载：[个人客户端源码 ZIP](https://github.com/letsgo-6/SparkWright/archive/refs/heads/main.zip)。解压后进入包含 `启动SparkWright.bat` 的文件夹；社区部署包由作者另行部署，不需要普通用户安装。
