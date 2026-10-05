@@ -131,7 +131,6 @@
 | util-deprecate | 1.0.2 | MIT | [许可文本](docs/third-party-licenses/util-deprecate-1.0.2.txt) |
 | which | 2.0.2 | ISC | [许可文本](docs/third-party-licenses/which-2.0.2.txt) |
 | wrappy | 1.0.2 | ISC | [许可文本](docs/third-party-licenses/wrappy-1.0.2.txt) |
-
 | @fastify/websocket | 11.3.3 | MIT | [许可文本](docs/third-party-licenses/_fastify_websocket-11.3.3.txt) |
 | fastify-plugin | 6.0.0 | MIT | [许可文本](docs/third-party-licenses/fastify-plugin-6.0.0.txt) |
 | duplexify | 4.1.3 | MIT | [许可文本](docs/third-party-licenses/duplexify-4.1.3.txt) |
