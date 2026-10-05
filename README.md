@@ -20,6 +20,8 @@
 
 ## 快速开始
 
+下载：[个人客户端源码 ZIP](https://github.com/letsgo-6/SparkWright/archive/refs/heads/main.zip)。解压后进入包含 `启动SparkWright.bat` 的文件夹；社区部署包由作者另行部署，不需要普通用户安装。
+
 **Windows 一键启动：**安装 Node.js 22.12+ 后，双击根目录的 `启动SparkWright.bat`。首次运行自动安装依赖，服务就绪后自动打开浏览器；以后直接双击即可。请保持启动窗口打开，按 Ctrl+C 停止服务。如果个人版已经运行，会直接打开网址。
 
 安装 Node.js 22.12+，在项目根目录运行：
