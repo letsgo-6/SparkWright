@@ -6,10 +6,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import type { Idea, IdeaStatus, User } from '../types'
 import { STATUS_META, deadlineInfo, fmtDate } from '../utils'
-import { PublishIdeaDialog } from '../components/PublishIdeaDialog'
 import { ScoreHistory } from '../components/ScoreHistory'
 import { Phase2Dialog } from '../components/Phase2Dialog'
 import { usePlazaPermission } from '../hooks/usePlazaPermission'
+import { ct } from '../community/client'
 
 const FILTERS: { key: 'all' | IdeaStatus; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -32,7 +32,6 @@ export function IdeaListPage({ user }: { user: User }) {
   const [form, setForm] = useState({ title: '', content: '', deadline: '' })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [pubFor, setPubFor] = useState<Idea | null>(null)
 
   useEffect(() => { if (showNew) document.getElementById('new-idea-title')?.focus() }, [showNew])
 
@@ -167,12 +166,11 @@ export function IdeaListPage({ user }: { user: User }) {
                     ) : (
                       <button
                         className="link-btn"
-                        disabled={!permission.ready || permission.muted || !!idea.plaza_removed_at}
                         onClick={() => {
-                          setPubFor(idea)
+                          nav('/community/submit')
                         }}
                       >
-                        {idea.plaza_removed_at ? tr("[已下架，等待 Owner 恢复]") : permission.muted ? tr("[已禁言]") : tr("[🌐 发布]")}
+                        {ct('[投稿到社区]','[Submit to community]')}
                       </button>
                     )}
                   </span>
@@ -184,7 +182,6 @@ export function IdeaListPage({ user }: { user: User }) {
         </div>
       )}
 
-      {pubFor&&<PublishIdeaDialog idea={pubFor} onClose={()=>setPubFor(null)} onPublished={async()=>setIdeas(await api.get('/api/ideas'))}/>}
 
       {showNew && (
         <Phase2Dialog title={tr('记录新灵感')} onClose={() => { if (!busy) setShowNew(false) }}>

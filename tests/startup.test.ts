@@ -82,7 +82,8 @@ for (const mode of ['env-file', 'process-env', 'missing'] as const) {
         try {
           assert.equal((inspect.pragma('integrity_check') as any)[0].integrity_check, 'ok')
           assert.equal((inspect.prepare("SELECT email FROM users WHERE name='legacy-startup'").get() as any).email, PERSONAL_EDITION ? 'startup@test.invalid' : null)
-          assert.equal((inspect.prepare("SELECT count(*) n FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").get() as any).n,37)
+          assert.equal((inspect.prepare("SELECT count(*) n FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").get() as any).n,PERSONAL_EDITION ? 38 : 37)
+          if (PERSONAL_EDITION) assert.ok(inspect.prepare("SELECT name FROM sqlite_master WHERE name='community_idea_links'").get())
           assert.equal((inspect.prepare('SELECT email_verified_at FROM users WHERE name=?').get(PERSONAL_EDITION ? 'legacy-startup' : 'startup-fixture') as any).email_verified_at, null)
         } finally { inspect.close() }
       }

@@ -2,7 +2,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { sampleSparkSurface } from './spark-particles'
+import { sampleSparkSurfaceAsync } from './spark-particles'
 
 export type SparkPhase = 'meditating' | 'entering' | 'brainstorming' | 'exiting'
 export type SparkSceneHandle = { update: (phase: SparkPhase, reduced: boolean) => void; dispose: () => void }
@@ -38,6 +38,7 @@ const fragmentShader = `
   }`
 
 export async function createSparkScene(host: HTMLDivElement, signal: AbortSignal, initial: SparkPhase, reducedMotion: boolean, saveData: boolean, failed: () => void): Promise<SparkSceneHandle> {
+  delete host.dataset.renderFps
   let disposed = false, shaderFailed = false, frame = 0, reduced = reducedMotion, energy = initial === 'brainstorming' ? 1 : 0
   let time = 0, angle = 0, last = 0
   let rampStart = performance.now(), rampFrom = energy, rampTarget = energy
@@ -45,7 +46,7 @@ export async function createSparkScene(host: HTMLDivElement, signal: AbortSignal
   const scene = new THREE.Scene()
   const assets: THREE.Object3D[] = []
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !mobile, powerPreference: mobile ? 'low-power' : 'default' })
-  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5))
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1 : 1.25))
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.15
@@ -67,6 +68,7 @@ export async function createSparkScene(host: HTMLDivElement, signal: AbortSignal
   let headMaterial: THREE.ShaderMaterial | undefined
   const particleLayers: THREE.Points[] = []
   let slowFrames = 0, measuredFrames = 0, measuredTime = 0, qualityReduced = false
+  let renderedFrames=0, renderedSince=0
   const rockStates: { object: THREE.Object3D; position: THREE.Vector3; rotation: THREE.Quaternion; axis: THREE.Vector3; angle: number; speed: number }[] = []
   const orbitCenter = new THREE.Vector3()
   const headCenter = new THREE.Vector3()
@@ -153,6 +155,8 @@ export async function createSparkScene(host: HTMLDivElement, signal: AbortSignal
       rock.object.quaternion.copy(rock.rotation).multiply(new THREE.Quaternion().setFromAxisAngle(rock.axis, rock.angle * .65))
     }
     draw()
+    if(!renderedSince)renderedSince=now
+    if(++renderedFrames>=60){host.dataset.renderFps=(60000/(now-renderedSince)).toFixed(1);renderedFrames=0;renderedSince=now}
   }
   function visibility() {
     cancelAnimationFrame(frame); last = 0
@@ -182,17 +186,19 @@ export async function createSparkScene(host: HTMLDivElement, signal: AbortSignal
     node(spark, 'SPARK_root'); node(spark, 'SPARK_tail_anchor'); node(spark, 'SPARK_glow_anchor')
     const center = node(spark, 'SPARK_head_center').getWorldPosition(new THREE.Vector3())
     headCenter.copy(center)
-    const makePoints = (source: THREE.Object3D, origin: THREE.Vector3, count: number, moving: number, size: number) => {
+    const makePoints = async (source: THREE.Object3D, origin: THREE.Vector3, count: number, moving: number, size: number) => {
+      const geometry = await sampleSparkSurfaceAsync(source, origin, count, signal)
+      if(signal.aborted){geometry.dispose();throw new DOMException('Cancelled','AbortError')}
       const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
         uniforms: { angle: { value: 0 }, energy: { value: energy }, clock: { value: 0 }, pixelRatio: { value: renderer.getPixelRatio() }, size: { value: size }, moving: { value: moving } } })
-      const points = new THREE.Points(sampleSparkSurface(source, origin, count), material)
+      const points = new THREE.Points(geometry, material)
       particleLayers.push(points)
       points.position.copy(origin); points.frustumCulled = false; scene.add(points)
       source.traverse((object) => { if (object instanceof THREE.Mesh) object.visible = false })
       return material
     }
-    headMaterial = makePoints(node(spark, 'SPARK_head'), center, mobile ? 8500 : 18000, reduced ? 0 : 1, 1.65)
-    makePoints(node(spark, 'SPARK_body'), node(spark, 'SPARK_body').getWorldPosition(new THREE.Vector3()), mobile ? 1800 : 4500, 0, 1.3)
+    headMaterial = await makePoints(node(spark, 'SPARK_head'), center, mobile ? 6000 : 12000, reduced ? 0 : 1, 1.65)
+    await makePoints(node(spark, 'SPARK_body'), node(spark, 'SPARK_body').getWorldPosition(new THREE.Vector3()), mobile ? 1200 : 3000, 0, 1.3)
     const glowCanvas = document.createElement('canvas'); glowCanvas.width = glowCanvas.height = 64
     const glowContext = glowCanvas.getContext('2d')!
     const gradient = glowContext.createRadialGradient(32, 32, 0, 32, 32, 32)

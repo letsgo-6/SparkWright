@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import { Phase2Dialog } from '../components/Phase2Dialog'
 import { STANDARD_VERSION } from '../../shared/scoring-standard'
-import { PublishIdeaDialog } from '../components/PublishIdeaDialog'
 import { ScoreAssessment } from '../components/ScoreAssessment'
 import { formatIdeaScore } from '../../shared/idea-score'
 import { dimensionLabel } from '../lib/phase2'
@@ -14,6 +13,7 @@ import { STATUS_META, deadlineInfo, fmtDate, fmtTime } from '../utils'
 import { ScoreHistory } from '../components/ScoreHistory'
 import { SynthesisSource } from '../components/SynthesisSource'
 import { usePlazaPermission } from '../hooks/usePlazaPermission'
+import { ct } from '../community/client'
 
 const PRIO_ORDER: Priority[] = ['high', 'mid', 'low']
 
@@ -47,7 +47,6 @@ export function IdeaDetailPage({ user }: { user: User }) {
   useEffect(()=>()=>scoreRequest.current?.abort(),[])
   const [scoreBusy, setScoreBusy] = useState(false)
   const [scoreErr, setScoreErr] = useState('')
-  const [joining,setJoining]=useState(false),[publishForLeaderboard,setPublishForLeaderboard]=useState(false)
   const [scoreRevision, setScoreRevision] = useState(0)
 
   const [planAngle, setPlanAngle] = useState('')
@@ -488,11 +487,8 @@ export function IdeaDetailPage({ user }: { user: User }) {
               <button className="btn btn-primary" onClick={() => doScore()} disabled={scoreBusy}>
                 {scoreBusy ? tr("评分中…") : tr("开始评分 / 检查缓存")}
               </button>
-              <button className="btn btn-ghost" disabled={joining||scoreBusy||(!idea.leaderboard_opt_in&&(!score||score.score===100||!!idea.plaza_removed_at||!permission.ready||permission.muted))} onClick={async()=>{
-                if(!idea.leaderboard_opt_in&&(!idea.is_public||!idea.score_public)){setPublishForLeaderboard(true);return}
-                setJoining(true);setScoreErr('');try{await api.put('/api/ideas/'+idea.id+'/leaderboard',{enabled:!idea.leaderboard_opt_in});await load()}catch(err:any){setScoreErr(err.message)}finally{setJoining(false)}
-              }}>{joining?tr('处理中…'):tr(idea.leaderboard_opt_in?'退出排行榜':'参加排行榜')}</button>
-              <p className="muted small">{tr(idea.leaderboard_opt_in?'已选择参榜；修改正文后暂时离榜，重新评分后恢复。撤下灵感或隐藏评分会取消参榜。':'评分和发布均不会自动参榜；退出排行榜不会撤下公开灵感。')}</p>
+              <Link className="btn btn-ghost" to="/community/submit">{ct('上传选定灵感到社区参榜','Submit an idea to the community')}</Link>
+              <p className="muted small">{ct('本地评分保存在电脑；社区需单独评分、公开并自主参榜。','Local scores stay on your computer. Community participation requires a separate score, publication and opt-in.')}</p>
               {scoreClientTotal!==null&&<span className="muted small">{tr('本次客户端等待：')}{(scoreClientTotal/1000).toFixed(3)}s</span>}
               <button className="btn btn-ghost" onClick={()=>{scoreRequestId.current=null;void doScore(true)}} disabled={scoreBusy}>{tr('强制重新评分')}</button>
               {scoreBusy&&<><span className="muted small" role="status">{tr('请求已发送，已等待 {0} 秒；不设时长限制',[scoreElapsed])}</span><button className="btn btn-ghost" onClick={()=>scoreRequest.current?.abort()}>{tr('取消等待')}</button></>}
@@ -599,7 +595,6 @@ export function IdeaDetailPage({ user }: { user: User }) {
         </div>
       </div>
 
-      {publishForLeaderboard&&<PublishIdeaDialog idea={idea} joinLeaderboard onClose={()=>setPublishForLeaderboard(false)} onPublished={()=>load()}/>}
       {rawOpen && (
         <Phase2Dialog variant="drawer" title={tr("🗄 AI 原始记录")} onClose={() => setRawOpen(false)}>
             {rawLogs.length === 0 && <p className="muted small">{tr("还没有 AI 调用记录。")}</p>}

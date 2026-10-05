@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-community/
+/private-community/
+/qa/
 /data/
 .env
 .env.*

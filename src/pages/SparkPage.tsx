@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { SparkScene } from '../components/SparkScene'
 import type { SparkPhase } from '../lib/spark-scene'
 import { tr, useLanguage } from '../i18n/index'
+import { ct } from '../community/client'
 
 const HOLD_MS = 900
 
@@ -14,7 +15,7 @@ export function SparkPage() {
   const [failure, setFailure] = useState(false)
   const [retry, setRetry] = useState(0)
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const [saveData] = useState(() => {
+  const [saveData, setSaveData] = useState(() => {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
     return !!connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || '')
   })
@@ -111,6 +112,7 @@ export function SparkPage() {
         <h1>{tr('灵感酱')}</h1><p>{tr(expanded ? '头脑风暴' : '冥想')}</p>
       </header>
       <div className="spark-controls">
+        <button className="spark-retry" onClick={()=>{setReady(false);setFailure(false);setSaveData(v=>!v)}} aria-pressed={saveData}>{saveData?ct('切换标准画质','Use standard quality'):ct('切换低画质','Use low quality')}</button>
         <p className="spark-hint">{tr(expanded ? '让念头自由碰撞。' : '安静片刻，给灵感留一点空间。')}</p>
         {phase === 'meditating' || phase === 'entering' ? (
           <button type="button" className="spark-button" disabled={transitioning} onClick={() => switchMode('brainstorming')}>

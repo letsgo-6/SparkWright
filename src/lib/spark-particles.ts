@@ -2,16 +2,18 @@
 import { BufferAttribute, BufferGeometry, Color, Mesh, Object3D, Vector3 } from 'three'
 
 // Sample all primitives in one coordinate frame, weighted by transformed triangle area.
-export function sampleSparkSurface(source: Object3D, center: Vector3, count: number, random = Math.random) {
+function* surfaceWork(source: Object3D, center: Vector3, count: number, random: () => number): Generator<void, BufferGeometry> {
   source.updateWorldMatrix(true, true)
   const triangles: { a: Vector3; b: Vector3; c: Vector3; color: Color; end: number }[] = []
   let area = 0
-  source.traverse((object) => {
-    if (!(object instanceof Mesh)) return
+  const meshes: Mesh[] = []
+  source.traverse(object => { if (object instanceof Mesh) meshes.push(object) })
+  for (const object of meshes) {
     const geometry = object.geometry as BufferGeometry
     const position = geometry.getAttribute('position'), index = geometry.index
     const length = index?.count ?? position.count
     for (let i = 0; i < length; i += 3) {
+      if (i > 0 && i % 3072 === 0) yield
       const vertex = (offset: number) => new Vector3().fromBufferAttribute(position, index ? index.getX(offset) : offset).applyMatrix4(object.matrixWorld).sub(center)
       const a = vertex(i), b = vertex(i + 1), c = vertex(i + 2)
       const size = b.clone().sub(a).cross(c.clone().sub(a)).length() / 2
@@ -21,10 +23,11 @@ export function sampleSparkSurface(source: Object3D, center: Vector3, count: num
       area += size
       triangles.push({ a, b, c, color: (material as { color?: Color }).color?.clone() ?? new Color('#8ca5ff'), end: area })
     }
-  })
+  }
   if (!triangles.length) throw new Error('spark_geometry_missing')
   const positions = new Float32Array(count * 3), colors = new Float32Array(count * 3), seeds = new Float32Array(count)
   for (let i = 0; i < count; i++) {
+    if (i > 0 && i % 1024 === 0) yield
     const target = random() * area
     let low = 0, high = triangles.length - 1
     while (low < high) { const middle = (low + high) >>> 1; if (triangles[middle].end < target) low = middle + 1; else high = middle }
@@ -41,4 +44,15 @@ export function sampleSparkSurface(source: Object3D, center: Vector3, count: num
   geometry.setAttribute('color', new BufferAttribute(colors, 3))
   geometry.setAttribute('seed', new BufferAttribute(seeds, 1))
   return geometry
+}
+export function sampleSparkSurface(source: Object3D, center: Vector3, count: number, random = Math.random) {
+  const work = surfaceWork(source,center,count,random)
+  let chunk = work.next()
+  while (!chunk.done) chunk = work.next()
+  return chunk.value
+}
+export async function sampleSparkSurfaceAsync(source: Object3D, center: Vector3, count: number, signal: AbortSignal) {
+  const work=surfaceWork(source,center,count,Math.random)
+  try { let chunk=work.next(); while(!chunk.done){await new Promise(resolve=>setTimeout(resolve,0));if(signal.aborted)throw new DOMException('Cancelled','AbortError');chunk=work.next()} return chunk.value }
+  finally {work.return(undefined as never)}
 }

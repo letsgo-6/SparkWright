@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-import Fastify from 'fastify'
+import Fastify, { type FastifyInstance } from 'fastify'
 import { performance } from 'node:perf_hooks'
 import fstatic from '@fastify/static'
 import { existsSync } from 'node:fs'
@@ -36,6 +36,7 @@ import { registerFeedbackRoutes } from './feedback'
 import { registerLeaderboard } from './leaderboard'
 import { PERSONAL_EDITION } from './edition'
 import { localWorkspace, requireLocalRequest } from './local-workspace'
+import { registerCommunityBridge } from './community-bridge'
 
 type Any = Record<string, any>
 
@@ -71,9 +72,17 @@ const NO_AI_CONFIG = {
 // 多人版的公开接口；个人版所有业务请求使用本地工作区身份。
 const PUBLIC_PATHS = new Set(['/api/health', '/api/auth/login', '/api/auth/register', '/api/auth/register/send-code', '/api/auth/logout', '/api/auth/me'])
 
-export async function buildApp(registration: RegistrationOptions = {}, personalEdition = PERSONAL_EDITION) {
+export interface AppOptions {
+  configure?: (app: FastifyInstance) => Promise<void>
+  registration?: (app: FastifyInstance) => void
+  allowedRoute?: (method: string, pathname: string) => boolean
+  distDir?: string
+  indexFile?: string
+  trustProxy?: string[]
+}
+export async function buildApp(registration: RegistrationOptions = {}, personalEdition = PERSONAL_EDITION, options: AppOptions = {}) {
   const localUser = personalEdition ? localWorkspace() : null
-  const app = Fastify({ logger: false })
+  const app = Fastify({ logger: false, trustProxy: options.trustProxy || false })
   app.addHook('onSend',async(req,reply,payload)=>{
     if(/^\/api\/(ideas(?:[/?]|$)|plaza(?:[/?]|$)|synthesis(?:[/?]|$))/.test(req.url))reply.header('Cache-Control','no-store')
     const operationId=(req as any).scoringOperationId
@@ -102,11 +111,15 @@ export async function buildApp(registration: RegistrationOptions = {}, personalE
       req.authUser = localUser
     }
     const url = (req.url || '').split('?')[0]
+    if (options.allowedRoute && !options.allowedRoute(req.method, url)) throw permissionError(404, 'route_unavailable', '此服务不提供该功能')
     if (!url.startsWith('/api')) return
     if (localUser && (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.headers.origin)) requireOrigin(req)
-    if (PUBLIC_PATHS.has(url)) return
+    if (PUBLIC_PATHS.has(url) || ['/api/community/auth/register', '/api/community/auth/login', '/api/community/auth/me'].includes(url)) return
     requireAuth(req)
   })
+
+  if (options.configure) await options.configure(app)
+  if (localUser) await registerCommunityBridge(app)
 
   registerBackupRoutes(app)
   registerExportRoutes(app)
@@ -144,7 +157,8 @@ export async function buildApp(registration: RegistrationOptions = {}, personalE
 
   // ---------- 认证：注册 / 登录 / 登出 / 当前用户 ----------
   if (!personalEdition) {
-    registerEmailRegistration(app, registration)
+    if (options.registration) options.registration(app)
+    else registerEmailRegistration(app, registration)
 
     app.post<{ Body: Any }>('/api/auth/login', async (req, reply) => {
       const mail = String(req.body?.email || '').trim().toLowerCase()
@@ -2369,7 +2383,7 @@ export async function buildApp(registration: RegistrationOptions = {}, personalE
     const code = typeof err.code === 'string' && Object.hasOwn(ERROR_MESSAGES, err.code) ? err.code : fallback
     const message = statusCode < 500 && code === err.code ? err.message : ERROR_MESSAGES[code][0]
     if (['/api/auth/register', '/api/auth/register/send-code'].includes(req.url.split('?')[0])) {
-      const safeStatus = [400, 403, 409, 429, 503].includes(statusCode) ? statusCode : 500
+      const safeStatus = [400, 403, 404, 409, 429, 503].includes(statusCode) ? statusCode : 500
       return reply.code(safeStatus).send({ error: { message: safeStatus === 500 ? '注册操作失败，请稍后重试' : message,
         code: safeStatus === 500 ? 'registration_failed' : code } })
     }
@@ -2385,12 +2399,12 @@ export async function buildApp(registration: RegistrationOptions = {}, personalE
   })
 
   // 生产模式：托管前端构建产物
-  const distDir = path.join(process.cwd(), 'dist')
+  const distDir = options.distDir || path.join(process.cwd(), 'dist')
   if (existsSync(distDir)) {
     await app.register(fstatic, { root: distDir })
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api')) return reply.code(404).send({ error: { message: '接口不存在', code: 'not_found' } })
-      return reply.sendFile('index.html')
+      return reply.sendFile(options.indexFile || 'index.html')
     })
   } else {
     app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: { message: '接口不存在', code: 'not_found' } }))

@@ -5,9 +5,18 @@ export function BrandMark({ animated = false }: { animated?: boolean }) {
   const video = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const [opaque, setOpaque] = useState(false)
+  const [enabled, setEnabled] = useState(false)
+  useEffect(() => {
+    const compact = window.matchMedia('(max-width: 760px), (pointer: coarse)'), reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const connection = (navigator as Navigator & {connection?: {saveData?:boolean;effectiveType?:string}}).connection
+    let timer: number | undefined
+    const update = () => { clearTimeout(timer); setEnabled(false); if (animated && !compact.matches && !reduced.matches && !connection?.saveData && !['slow-2g','2g'].includes(connection?.effectiveType||'')) timer=window.setTimeout(()=>setEnabled(true),1500) }
+    update(); compact.addEventListener('change',update); reduced.addEventListener('change',update)
+    return () => {clearTimeout(timer);compact.removeEventListener('change',update);reduced.removeEventListener('change',update)}
+  }, [animated])
 
   useEffect(() => {
-    if (!animated || !video.current) return
+    if (!enabled || !video.current) {setPlaying(false);return}
     const media = video.current
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
     let alive = true, sequence = 0, frame: number | undefined
@@ -40,11 +49,11 @@ export function BrandMark({ animated = false }: { animated?: boolean }) {
       reduced.removeEventListener('change', sync)
       media.removeEventListener('error', failed)
     }
-  }, [animated])
+  }, [enabled])
 
   return <span className={`brand-mark${playing ? ' brand-playing' : ''}${opaque ? ' brand-opaque' : ''}`} role="img" aria-label="SparkWright">
     <img src="/brand/spark-logo.png" alt="" width="800" height="416" />
-    {animated && <video ref={video} muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1}
+    {enabled && <video ref={video} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1}
       onLoadedMetadata={() => setOpaque(!!video.current?.currentSrc.endsWith('.mp4'))}>
       <source src="/brand/spark-logo.webm" type="video/webm" />
       <source src="/brand/spark-logo.mp4" type="video/mp4" />

@@ -3,17 +3,18 @@ import {useState} from 'react'
 import {tr,locale} from '../i18n/index'
 import type {ActivityReport,ActivityView} from '../../shared/new-round-types'
 import {useFeatureData} from '../lib/useFeatureData'
+import {api} from '../api'
 const labels:Record<ActivityView,string>={'24h':'过去24小时','7d':'过去7天','30d':'过去30天'}
-export function ActivityAnalytics(){
+export function ActivityAnalytics({endpoint='/api/admin/analytics/activity',get=api.get,description}:{endpoint?:string;get?:typeof api.get;description?:string}={}){
   const [view,setView]=useState<ActivityView>('24h'),[selected,setSelected]=useState<number|null>(null)
-  const {data,error,loading,reload}=useFeatureData<ActivityReport>(`/api/admin/analytics/activity?view=${view}`,60000)
+  const {data,error,loading,reload}=useFeatureData<ActivityReport>(`${endpoint}${endpoint.includes('?')?'&':'?'}view=${view}`,60000,get)
   const label=(start:string)=>new Intl.DateTimeFormat(locale(),{timeZone:'Asia/Shanghai',month:'short',day:'numeric',...(view==='24h'?{hour:'2-digit' as const}: {})}).format(new Date(start))
   const max=Math.max(1,...(data?.series.map(p=>p.value||0)||[])), x=(i:number)=>45+i*650/Math.max(1,(data?.series.length||2)-1), y=(n:number)=>190-n*150/max
   const segments:string[]=[];let segment=''
   data?.series.forEach((p,i)=>{if(p.value===null){if(segment)segments.push(segment);segment=''}else segment+=`${segment?' L':'M'} ${x(i)} ${y(p.value)}`});if(segment)segments.push(segment)
   return <section className="settings-card activity-panel">
     <div className="panel-head"><h2>{tr('活跃用户分析')}</h2><button className="chip" disabled={loading} onClick={reload}>{tr('刷新状态')}</button></div>
-    <p className="muted">{tr('成功使用业务功能的普通账号，每个周期按账号去重。后台、登录和自动心跳不计入。')}</p>
+    <p className="muted">{description||tr('成功使用业务功能的普通账号，每个周期按账号去重。后台、登录和自动心跳不计入。')}</p>
     {error&&<p className="error-text" role="alert">{tr(error)} <button className="link-btn" onClick={reload}>{tr('重试')}</button></p>}
     {loading&&!data&&<p role="status">{tr('正在加载…')}</p>}
     {data&&<>

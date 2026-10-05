@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0
 // Stable error codes. Browser clients never display server or provider error bodies.
 export const ERROR_MESSAGES: Record<string, readonly [string, string]> = {
+  community_unavailable: ['社区暂时无法连接；本地个人功能仍可使用', 'Community is unavailable. Your local workspace remains available.'],
+  community_unauthorized: ['请重新登录社区；本地数据仍可使用', 'Sign in to the community again. Local data remains available.'],
+  registration_closed: ['社区注册尚未开放，请稍后重试', 'Community registration is not open yet.'],
+  community_ai_quota: ['社区评分每天最多10次，请稍后再试', 'Community scoring is limited to 10 attempts per day.'],
+  unsafe_ai_endpoint: ['请选择社区允许的 HTTPS 模型供应商', 'Choose an allowed HTTPS model provider.'],
+  community_rate_limited: ['操作过于频繁，请稍后重试', 'Too many requests. Try again later.'],
+  confirmation_required: ['请确认仅上传选定灵感的正文', 'Confirm uploading only the selected idea text.'],
+  request_conflict: ['请求编号已被其他内容使用，请刷新状态', 'The request ID belongs to different content. Refresh the status.'],
+  channel_archived: ['公共频道已暂停，请联系管理员', 'The public room is paused. Contact the administrator.'],
+  too_many_connections: ['连接过多，请关闭多余的标签页', 'Too many connections. Close extra tabs.'],
   registration_disabled: ['此实例不开放注册，请由维护者初始化账号', 'Registration is disabled. Ask the operator to initialize the account.'],
   leaderboard_full_score_excluded: ['100.0 分按异常分处理，不能参与排行榜', '100.0 scores are treated as anomalous and cannot join the leaderboard.'],
   leaderboard_scoring_too_slow: ['评分超过 60 秒或缺少有效耗时记录，请重新评分后再参榜', 'The score took over 60 seconds or has no valid timing record. Score again before joining the leaderboard.'],

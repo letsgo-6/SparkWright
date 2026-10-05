@@ -132,6 +132,12 @@
 | which | 2.0.2 | ISC | [许可文本](docs/third-party-licenses/which-2.0.2.txt) |
 | wrappy | 1.0.2 | ISC | [许可文本](docs/third-party-licenses/wrappy-1.0.2.txt) |
 
+| @fastify/websocket | 11.3.3 | MIT | [许可文本](docs/third-party-licenses/_fastify_websocket-11.3.3.txt) |
+| fastify-plugin | 6.0.0 | MIT | [许可文本](docs/third-party-licenses/fastify-plugin-6.0.0.txt) |
+| duplexify | 4.1.3 | MIT | [许可文本](docs/third-party-licenses/duplexify-4.1.3.txt) |
+| stream-shift | 1.0.3 | MIT | [许可文本](docs/third-party-licenses/stream-shift-1.0.3.txt) |
+| ws | 8.22.0 | MIT | [许可文本](docs/third-party-licenses/ws-8.22.0.txt) |
+
 ## 素材
 
 本项目保留作者提供的品牌动效、灵感酱参考图与 3D 场景素材，以及公开使用的支持作者入口。微信赞赏码和爱发电链接指向原作者，不能被作为第三方的收款身份。MPL 不授予作者名称或 Logo 的商标背书权。

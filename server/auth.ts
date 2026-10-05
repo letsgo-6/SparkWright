@@ -15,6 +15,8 @@ const SECRET = process.env.AUTH_SECRET
 if (!PERSONAL_EDITION && (!SECRET || SECRET.length < 32)) throw new Error('请设置至少 32 字符的 AUTH_SECRET；本地运行请先执行 npm run setup:local')
 const COOKIE_NAME = 'ideabox_session'
 const MAX_AGE = 60 * 60 * 24 * 7 // 7 天
+let sessionAllowed = (_token: string) => true
+export function setSessionValidator(validate: (token: string) => boolean): void { sessionAllowed = validate }
 
 export interface SessionUser {
   id: number
@@ -31,12 +33,13 @@ const hmac = (data: string) => {
 export function signToken(userId: number, name: string): string {
   const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const now = Math.floor(Date.now() / 1000)
-  const payload = b64url(JSON.stringify({ sub: userId, name, iat: now, exp: now + MAX_AGE }))
+  const payload = b64url(JSON.stringify({ sub: userId, name, iat: now, exp: now + MAX_AGE, jti: crypto.randomUUID() }))
   return `${header}.${payload}.${hmac(`${header}.${payload}`)}`
 }
 
 /** 校验 JWT：签名 + 过期时间，通过返回会话用户，否则 null */
 export function verifyToken(token: string): SessionUser | null {
+  if (!sessionAllowed(token)) return null
   const parts = token.split('.')
   if (parts.length !== 3) return null
   const expected = hmac(`${parts[0]}.${parts[1]}`)
@@ -55,7 +58,7 @@ export function verifyToken(token: string): SessionUser | null {
   }
 }
 
-function readCookie(req: FastifyRequest, name: string): string | null {
+export function readCookie(req: FastifyRequest, name: string): string | null {
   const raw = req.headers.cookie
   if (!raw) return null
   for (const part of raw.split(';')) {

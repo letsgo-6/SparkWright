@@ -1,34 +1,31 @@
 // SPDX-License-Identifier: MPL-2.0
 import { tr, setLanguage, useLanguage, validLanguage } from './i18n/index'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { api } from './api'
 import type { User } from './types'
 import { isAdmin } from './types'
-import { AdminPage } from './pages/AdminPage'
-import { AuthPage } from './pages/AuthPage'
-import { ChatPage } from './pages/ChatPage'
-import { ConsultPage } from './pages/ConsultPage'
-import { SparkPage } from './pages/SparkPage'
-import { DevPage } from './pages/DevPage'
-import { IdeaDetailPage } from './pages/IdeaDetailPage'
-import { IdeaListPage } from './pages/IdeaListPage'
-import { MediaContentPage } from './pages/MediaContentPage'
-import { OrdersPage } from './pages/OrdersPage'
-import { PlazaDetailPage } from './pages/PlazaDetailPage'
-import { PlazaPage } from './pages/PlazaPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { StudioPage } from './pages/StudioPage'
-import { WishesPage } from './pages/WishesPage'
 import { NotificationCenter } from './components/NotificationCenter'
 import { SupportAuthor } from './components/SupportAuthor'
-import { IdeaSynthesisPage } from './pages/IdeaSynthesisPage'
-import { ResourcesPage } from './pages/ResourcesPages'
-import { FeedbackPage } from './pages/FeedbackPage'
-import { LeaderboardNav, LeaderboardPage } from './pages/LeaderboardPage'
 import { Phase2Dialog } from './components/Phase2Dialog'
 import { BrandMark } from './components/BrandMark'
 import { useInterfaceEffects } from './hooks/useInterfaceEffects'
+import { ct } from './community/client'
+const CommunityApp = lazy(() => import('./community/CommunityApp'))
+const AuthPage = lazy(() => import('./pages/AuthPage').then(m => ({default:m.AuthPage})))
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({default:m.AdminPage})))
+const ConsultPage = lazy(() => import('./pages/ConsultPage').then(m => ({default:m.ConsultPage})))
+const SparkPage = lazy(() => import('./pages/SparkPage').then(m => ({default:m.SparkPage})))
+const DevPage = lazy(() => import('./pages/DevPage').then(m => ({default:m.DevPage})))
+const IdeaDetailPage = lazy(() => import('./pages/IdeaDetailPage').then(m => ({default:m.IdeaDetailPage})))
+const IdeaListPage = lazy(() => import('./pages/IdeaListPage').then(m => ({default:m.IdeaListPage})))
+const MediaContentPage = lazy(() => import('./pages/MediaContentPage').then(m => ({default:m.MediaContentPage})))
+const OrdersPage = lazy(() => import('./pages/OrdersPage').then(m => ({default:m.OrdersPage})))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({default:m.SettingsPage})))
+const StudioPage = lazy(() => import('./pages/StudioPage').then(m => ({default:m.StudioPage})))
+const WishesPage = lazy(() => import('./pages/WishesPage').then(m => ({default:m.WishesPage})))
+const IdeaSynthesisPage = lazy(() => import('./pages/IdeaSynthesisPage').then(m => ({default:m.IdeaSynthesisPage})))
+const ResourcesPage = lazy(() => import('./pages/ResourcesPages').then(m => ({default:m.ResourcesPage})))
 
 const THEME_KEY = 'ideabox.theme'
 
@@ -102,7 +99,7 @@ export default function App() {
 
   if (!user && (personalEdition || startupFailed)) return <div className="welcome"><div className="welcome-card"><p role="alert">{tr('网络连接失败，请检查网站服务后重试。')}</p><button className="btn" onClick={() => window.location.reload()}>{tr('重试')}</button></div></div>
 
-  if (!user) return <AuthPage registrationEnabled={!personalEdition} notice={authNotice} onAuthed={async (next) => {
+  if (!user) return <Suspense fallback={null}><AuthPage registrationEnabled={!personalEdition} notice={authNotice} onAuthed={async (next) => {
     const version = ++sessionVersion.current
     setChecking(true); setAuthNotice('')
     const settings = await api.get('/api/settings').catch(() => null)
@@ -110,7 +107,7 @@ export default function App() {
       setLanguage(validLanguage(settings?.language) ? settings.language : 'zh-CN')
       setUser(next); setChecking(false)
     }
-  }} />
+  }} /></Suspense>
 
   const logout = async () => {
     loggingOut.current = true
@@ -132,7 +129,8 @@ export default function App() {
             <div className="group-label">{tr("灵感")}</div>
             <NavLink to="/ideas">{tr("📝 我的灵感")}</NavLink>
             <NavLink to="/plaza">{tr("🌐 灵感广场")}</NavLink>
-            <LeaderboardNav key={user.id} />
+            <NavLink to="/leaderboard">{ct('灵感排行榜','Idea leaderboard')}</NavLink>
+            <NavLink to="/community">{ct('公共社区','Public community')}</NavLink>
             <NavLink to="/synthesis">{tr("🧬 灵感合成")}</NavLink>
           </div>
           <div className="nav-group">
@@ -175,7 +173,7 @@ export default function App() {
       <main id="main-content" className="main" tabIndex={-1}>
         <NotificationCenter key={`${user.id}:${user.role}`} user={user} refreshVersion={noticeVersion} actions={<><SupportAuthor /><NavLink className="btn btn-ghost" to="/consult">{tr("咨询接单管道")}</NavLink></>} leading={compact ? <><button className="sw-icon-button mobile-nav-toggle" aria-label={tr(mobileNavOpen ? '收起导航' : '导航菜单')} aria-expanded={mobileNavOpen} aria-controls="primary-navigation" onClick={() => setMobileNavOpen(open => !open)}><svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className={mobileNavOpen ? 'menu-open' : ''} aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button><BrandMark /></> : undefined} />
         {tr(authNotice) && <div className="page" style={{ paddingBottom: 0 }}><p className="error-text" role="alert">{tr(authNotice)}</p></div>}
-        <Routes>
+        <Suspense fallback={<p role="status">{tr('正在加载…')}</p>}><Routes>
           <Route path="/" element={<SparkPage key={user.id} />} />
           <Route path="/ideas" element={<IdeaListPage user={user} />} />
           <Route path="/ideas/:id" element={<IdeaDetailPage user={user} />} />
@@ -189,20 +187,22 @@ export default function App() {
           <Route path="/orders/resources" element={<ResourcesPage kind="orders" />} />
           <Route path="/settings/api-resources" element={<ResourcesPage kind="api" />} />
           <Route path="/synthesis" element={<IdeaSynthesisPage key={user.id} />} />
-          <Route path="/leaderboard" element={<LeaderboardPage key={user.id} />} />
-          <Route path="/feedback" element={<FeedbackPage key={user.id} />} />
-          <Route path="/feedback/:id" element={<FeedbackPage key={user.id} />} />
-          <Route path="/plaza" element={<PlazaPage user={user} />} />
-          <Route path="/plaza/:id" element={<PlazaDetailPage user={user} />} />
-          <Route path="/channels" element={<ChatPage user={user} />} />
-          <Route path="/channels/:channelId" element={<ChatPage user={user} />} />
+          <Route path="/community" element={<CommunityApp key="community" />} />
+          <Route path="/community/submit" element={<CommunityApp key="submit" initialTab="submit" />} />
+          <Route path="/leaderboard" element={<CommunityApp key="leaderboard" initialTab="leaderboard" />} />
+          <Route path="/feedback" element={<CommunityApp key="feedback" initialTab="feedback" />} />
+          <Route path="/feedback/:id" element={<CommunityApp key="feedback" initialTab="feedback" />} />
+          <Route path="/plaza" element={<CommunityApp key="plaza" initialTab="plaza" />} />
+          <Route path="/plaza/:id" element={<CommunityApp key="plaza" initialTab="plaza" />} />
+          <Route path="/channels" element={<CommunityApp key="chat" />} />
+          <Route path="/channels/:channelId" element={<CommunityApp key="chat" />} />
           <Route path="/chat" element={<Navigate to="/plaza" replace />} />
           <Route path="/chat/:channelId" element={<Navigate to="/plaza" replace />} />
           <Route path="/admin" element={personalEdition ? <Navigate to="/settings" replace /> : <AdminPage key={`${user.id}:${user.role}`} user={user} onAnnouncementsChanged={() => setNoticeVersion((version) => version + 1)}
             onRoleChanged={() => window.dispatchEvent(new CustomEvent('sparkwright:auth-refresh', { detail: { message: '账号角色已更新，权限已重新确认。' } }))} />} />
           <Route path="/settings" element={<SettingsPage key={user.id} user={user} theme={theme} setTheme={setTheme} />} />
           <Route path="*" element={<div className="page">{tr("页面不存在")}</div>} />
-        </Routes>
+        </Routes></Suspense>
       </main>
     </div>
   )

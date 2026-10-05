@@ -12,7 +12,7 @@ export function SparkScene({ phase, reduced, saveData, retry, onReady, onError }
   useEffect(() => {
     const controller = new AbortController()
     let handle: SparkSceneHandle | undefined
-    void import('../lib/spark-scene').then(({ createSparkScene }) => {
+    const start = () => { void import('../lib/spark-scene').then(({ createSparkScene }) => {
       if (controller.signal.aborted || !host.current) throw new DOMException('Cancelled', 'AbortError')
       return createSparkScene(host.current, controller.signal, latest.current.phase, latest.current.reduced, saveData, () => latest.current.onError())
     }).then((result) => {
@@ -21,8 +21,9 @@ export function SparkScene({ phase, reduced, saveData, retry, onReady, onError }
       scene.current = result
       result.update(latest.current.phase, latest.current.reduced)
       latest.current.onReady()
-    }).catch(() => { if (!controller.signal.aborted) latest.current.onError() })
-    return () => { controller.abort(); handle?.dispose(); scene.current = null }
+    }).catch(() => { if (!controller.signal.aborted) latest.current.onError() }) }
+    const timer=window.setTimeout(start,250)
+    return () => { clearTimeout(timer);controller.abort(); handle?.dispose(); scene.current = null }
   }, [saveData, retry])
   useEffect(() => { scene.current?.update(phase, reduced) }, [phase, reduced])
   return <div ref={host} className="spark-scene" />
