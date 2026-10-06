@@ -14,7 +14,7 @@
 
 升级已有的单账号数据库时，沿用原用户 ID、灵感与配置，不修改旧的邮箱或密码哈希。首次增加社区映射表前自动创建一致性快照。若数据库包含多个账号，启动明确拒绝自动选择，请保留备份由维护者处理。
 
-社区注册填写昵称、邮箱和密码，不发送邮箱验证码；昵称可以重名，聊天同时显示稳定账号 ID。首次登录需要联网，社区故障和退出不锁住个人功能。当前社区服务尚未部署到新主机；安装包里的默认地址不是已经上线的承诺。
+社区注册填写昵称、邮箱和密码，不发送邮箱验证码；昵称可以重名，聊天同时显示稳定账号 ID。首次登录需要联网，社区故障和退出不锁住个人功能。公共社区入口：[community.sparkwright.asia](https://community.sparkwright.asia)，与本地私人工作区独立运行。
 
 电脑通过本机后端连接配置的 HTTPS/WSS 社区，手机直接打开轻量社区网址。手机本期只提供社区功能，不下载电脑 3D、视频图标或私人工作台。完整边界见 [个人客户端与社区使用指南](docs/个人客户端与社区使用指南.md)。云端部署适配源码不包含在此次个人仓库公开发布范围。
 
@@ -24,9 +24,11 @@
 
 ## 快速开始
 
-下载：[个人客户端源码 ZIP](https://github.com/letsgo-6/SparkWright/archive/refs/heads/main.zip)。解压后进入包含 `启动SparkWright.bat` 的文件夹；社区部署包由作者另行部署，不需要普通用户安装。
+**Windows 推荐下载：[一键版 ZIP（含 Node.js 和 npm，约49 MB）](https://github.com/letsgo-6/SparkWright/releases/download/windows-one-click-2026-10-06/SparkWright-personal-v0.2.1-Windows-x64.zip)**，适用于 Intel/AMD 64位 Windows。完整解压后双击 `启动SparkWright.bat`；首次联网安装项目依赖，随后自动打开浏览器。
 
-**Windows 一键启动：**安装 Node.js 22.12+ 后，双击根目录的 `启动SparkWright.bat`。首次运行自动安装依赖，服务就绪后自动打开浏览器；以后直接双击即可。请保持启动窗口打开，按 Ctrl+C 停止服务。如果个人版已经运行，会直接打开网址。
+源码下载：[个人客户端源码 ZIP](https://github.com/letsgo-6/SparkWright/archive/refs/heads/main.zip)。源码 ZIP 不包含便携 Node.js，启动器会使用已安装的兼容环境或自动下载。社区部署包由作者另行部署，不需要普通用户安装。
+
+**Windows 一键启动：**解压到可写目录后，双击根目录的 `启动SparkWright.bat`，无需先输入命令。启动器优先使用包内便携 Node.js 或已安装的 Node.js 22.12+；缺少可用环境时自动从 Node.js 官网下载并校验，放入项目的 `.runtime/node/`，无需管理员权限，也不修改系统 PATH。首次运行自动安装依赖，需要联网；服务就绪后自动打开浏览器。支持64位 Windows（x64/ARM64），请保持启动窗口打开，按 Ctrl+C 停止服务。如果个人版已经运行，会直接打开网址。
 
 安装 Node.js 22.12+，在项目根目录运行：
 
